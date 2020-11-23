@@ -1,0 +1,13 @@
+{
+  "pwm": {
+    "ssh": {
+      "rpi_ip": "XXX.XXX.XX.XXX",
+      "username": "xxxxx",
+      "password": "xxxxxx"
+    },
+    "parameters":{
+      "frequency": 30.0,
+      "pin": 24
+    }
+  }
+}
