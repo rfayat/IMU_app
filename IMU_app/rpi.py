@@ -3,18 +3,6 @@
 Author: Romain Fayat, November 2020
 """
 import paramiko
-from .helpers import config
-
-# Read the parameter JSON and parse its values
-config_ssh = config["pwm"]["ssh"]
-config_pwm = config["pwm"]["parameters"]
-
-# Credentials for logging to the rapsberry pi
-host = config_ssh["rpi_ip"]
-port = 22
-username = config_ssh["username"]
-password = config_ssh["password"]
-path = config_ssh["path"]
 
 
 class RPI_connector(paramiko.SSHClient):
@@ -35,12 +23,12 @@ class RPI_connector(paramiko.SSHClient):
         out = [i.rstrip("\n") for i in out]  # remove trailing \n
         return out
 
-    def run_script(self, path_to_script, parameters):
+    def run_script(self, path, parameters):
         """Run a python script and return the corresponding PID
 
         Input
         -----
-        path_to_script, str
+        path, str
             The path to the script on the remote RPI
 
         parameters, dict
@@ -69,8 +57,15 @@ class RPI_connector(paramiko.SSHClient):
 
 if __name__ == '__main__':
     import time
-    ssh = RPI_connector.from_credentials(host, port, username, password)
-    pid = ssh.run_script(path, config_pwm)
+    from .helpers import config
 
-    time.sleep(10)
+    # Read the parameter JSON and parse its values
+    config_ssh = config["pwm"]["ssh"]
+    config_pwm = config["pwm"]["parameters"]
+    pwm_path = config["pwm"]["path"]
+
+    ssh = RPI_connector.from_credentials(**config_ssh)
+    pid = ssh.run_script(pwm_path, config_pwm)
+
+    time.sleep(3)
     ssh.kill(pid)

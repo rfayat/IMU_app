@@ -1,13 +1,17 @@
 {
+  "dotenv": ".my_variables",
   "pwm": {
     "ssh": {
-      "rpi_ip": "XXX.XXX.XX.XXX",
-      "username": "xxxxx",
-      "password": "xxxxxx"
+      "host": "XXX.XXX.XX.XXX",
+      "username": "XXXX",
+      "password": "XXXXXX",
+      "port": 22
     },
+    "path": "my_path/run_pwm.py",
     "parameters":{
-      "frequency": 30.0,
-      "pin": 24
+      "frequency": 1.0,
+      "pin": 24,
+      "duty_cycle": 50
     }
   }
 }
