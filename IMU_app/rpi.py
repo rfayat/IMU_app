@@ -23,7 +23,7 @@ class RPI_connector(paramiko.SSHClient):
         out = [i.rstrip("\n") for i in out]  # remove trailing \n
         return out
 
-    def run_script(self, path, parameters):
+    def run_script(self, path, options):
         """Run a python script and return the corresponding PID
 
         Input
@@ -31,8 +31,8 @@ class RPI_connector(paramiko.SSHClient):
         path, str
             The path to the script on the remote RPI
 
-        parameters, dict
-            A dictionary of parameters that will be passed to the script
+        options, dict
+            A dictionary of options that will be passed to the script
 
         Example:
         -------
@@ -42,10 +42,10 @@ class RPI_connector(paramiko.SSHClient):
 
         """
         # Reformat the parameters and use them to obtain the command
-        params_str = ""
-        for k, v in parameters.items():
-            params_str = params_str + f"--{k} {v} "
-        command = f"nohup python {path} {params_str} >/dev/null 2>&1 & echo $!"
+        options_str = ""
+        for k, v in options.items():
+            options_str = options_str + f"--{k} {v} "
+        command = f"nohup python {path} {options_str} >/dev/null 2>&1 & echo $!"  # noqa E501
         # Return the PID of the script as an integer
         out = self.exec_command(command)
         return int(out[0])
@@ -57,11 +57,13 @@ class RPI_connector(paramiko.SSHClient):
 
 if __name__ == '__main__':
     import time
-    from .helpers import config
+    from helpers import read_config
+
+    config = read_config()
 
     # Read the parameter JSON and parse its values
     config_ssh = config["pwm"]["ssh"]
-    config_pwm = config["pwm"]["parameters"]
+    config_pwm = config["pwm"]["options"]
     pwm_path = config["pwm"]["path"]
 
     ssh = RPI_connector.from_credentials(**config_ssh)

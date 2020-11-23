@@ -8,7 +8,7 @@
       "port": 22
     },
     "path": "my_path/run_pwm.py",
-    "parameters":{
+    "options":{
       "frequency": 1.0,
       "pin": 24,
       "duty_cycle": 50
