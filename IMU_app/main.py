@@ -51,6 +51,16 @@ async def start_pwm():
     return {"message": "Started PWM", "pid": pid}
 
 
+@app.get("/rpi/pwm/test_connection")
+async def test_connection_pwm():
+    "Test the connection to the remote raspberry pi"
+    connected = RPI_connector.test_connection(**param_pwm["ssh"])
+    if connected:
+        return {"message": "success"}
+    else:
+        return {"message": "failure"}
+
+
 @app.get("/rpi/kill")
 async def kill_all():
     "Kill all python processes on the remote rpi"
@@ -60,6 +70,7 @@ async def kill_all():
     return {"message": "Killed all python processes"}
 
 
+@app.get("/rpi/pwm/kill")
 @app.get("/rpi/kill/pwm")
 async def kill_pwm():
     "Kill the pwm process on the RPI"

@@ -16,6 +16,17 @@ class RPI_connector(paramiko.SSHClient):
         self.connect(host, port, username, password)
         return self
 
+    @classmethod
+    def test_connection(cls, host, port, username, password):
+        "Try to connect to the rpi, return True if success else False"
+        try:
+            # Connect to the rpi and run `$ ls`
+            self = cls.from_credentials(host, port, username, password)
+            self.exec_command("ls")
+            return True
+        except paramiko.ssh_exception.NoValidConnectionsError:
+            return False
+
     def exec_command(self, command):
         "Run a command and return the output"
         _, stdout, _ = super().exec_command(command)
