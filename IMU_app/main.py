@@ -3,15 +3,23 @@ Main code for the application for data acquisition.
 
 Author: Romain Fayat, November 2020
 """
-from fastapi import FastAPI, Request, File, UploadFile, Form
-from fastapi.templating import Jinja2Templates
-from .rpi import RPI_connector
-from .helpers import read_config
 import os
+from fastapi import FastAPI, Request, File, UploadFile, Form
+from fastapi.responses import RedirectResponse
+from fastapi.templating import Jinja2Templates
+from typing import Optional
+from .rpi import RPI_connector
+from .helpers import read_config, save_file
 
 
 parameters = read_config()
 param_pwm = parameters["pwm"]
+param_tis_win = parameters["tis_camera_win"]
+
+# Create the folder for saving tis state files if needed
+tis_saving_path = param_tis_win["saving_path"]
+if not os.path.isdir(tis_saving_path):
+    os.makedirs(tis_saving_path)
 
 app = FastAPI()
 templates = Jinja2Templates(directory="IMU_app/templates/")
@@ -24,8 +32,17 @@ async def dashboard(request: Request):
                                       context={"request": request})
 
 
+@app.get("/success")
+async def success(request: Request, success: bool, message: Optional[str]=""):
+    "Return the main dashboard"
+    return templates.TemplateResponse("success.html",
+                                      context={"request": request,
+                                               "success": success,
+                                                "message": message})
+
+
 # Handle TIS cameras
-@app.get("/tis_camera_win")
+@app.get("/tis_camera_win/upload_page")
 async def tis_cam_windows(request: Request):
     "Return the file upload page for a TIS cam state file"
     return templates.TemplateResponse("tis_camera_windows.html",
@@ -34,10 +51,14 @@ async def tis_cam_windows(request: Request):
 
 @app.post("/tis_camera_win/upload")
 async def tis_cam_windows_upload(request: Request,
-                                 file: UploadFile = File(...),
+                                 state_file: UploadFile = File(...),
                                  cam_name: str = Form(...)):
     "Upload a TIS cam state file"
-    return {"file_name": file.filename, "cam_name": cam_name}
+    file_name = "_".join([cam_name, "state_file"])
+    saving_path = os.path.sep.join([tis_saving_path, file_name])
+    save_file(state_file.file, saving_path)
+    return {"file_name": state_file.filename, "cam_name": cam_name,
+            "saving_path": saving_path}
 
 
 # Handle raspberry pi

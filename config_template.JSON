@@ -13,5 +13,8 @@
       "pin": 24,
       "duty_cycle": 50
     }
+  },
+  "tis_camera_win": {
+    "saving_path": ".tmp"
   }
 }
