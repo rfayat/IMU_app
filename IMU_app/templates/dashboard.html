@@ -7,7 +7,9 @@
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ho+j7jyWK8fNQe+A12Hb8AhRq26LrZ/JpcUGGOn+Y7RsweNrtN/tE3MoK7ZeZDyx" crossorigin="anonymous"></script>
 </head>
+
 <body>
+
 
 <nav class="navbar navbar-dark bg-dark">
   <a class="navbar-brand"><h1>IMU App</h1></a>
@@ -15,64 +17,30 @@
 
 
 <div class="container-fluid">
-
   <div class="accordion" id="accordionExample">
-  <div class="card">
-    <div class="card-header" id="headingOne">
-      <h2 class="mb-0">
-        <button class="btn btn-link btn-block text-left" type="button" data-toggle="collapse" data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
-          <h2>Active Processes</h2>
-        </button>
-      </h2>
-    </div>
-    <div id="collapseOne" class="collapse show" aria-labelledby="headingOne" data-parent="#accordionExample">
-      <div class="card-body">
-        <div class="card-deck">
-
-          <div class="card" style="width: 18rem;">
-            <div class="card-body">
-              <h5 class="card-title">CAM0</h5>
-              <a href="#" class="btn btn-danger">Stop Process</a>
-            </div>
-          </div>
-
-          <div class="card" style="width: 18rem;">
-            <div class="card-body">
-              <h5 class="card-title">CAM1</h5>
-              <a href="#" class="btn btn-danger">Stop Process</a>
-            </div>
-          </div>
-
-
-        </div>
+    <div class="card">
+      <div class="card-header" id="headingOne">
+        <h2 class="mb-0">
+          <button class="btn btn-link btn-block text-left" type="button" data-toggle="collapse" data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+            <h2>Active Processes</h2>
+          </button>
+        </h2>
       </div>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-header" id="headingTwo">
-      <h2 class="mb-0">
-        <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
-            <h2>New Process</h2>
-        </button>
-      </h2>
-    </div>
-    <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionExample">
-      <div class="card-body">
+      <div id="collapseOne" class="collapse show" aria-labelledby="headingOne" data-parent="#accordionExample">
         <div class="card-body">
           <div class="card-deck">
 
-            <div class="card">
+            <div class="card" style="width: 18rem;">
               <div class="card-body">
-                <h5 class="card-title">Local TIS Camera (Windows)</h5>
-                <a href="#" class="btn btn-lg btn-success">New</a>
+                <h5 class="card-title">CAM0</h5>
+                <a href="#" class="btn btn-danger">Stop Process</a>
               </div>
             </div>
 
-            <div class="card">
+            <div class="card" style="width: 18rem;">
               <div class="card-body">
-                <h5 class="card-title">Remote PWM (raspberry)</h5>
-                <a href="#" class="btn btn-lg btn-success">New</a>
+                <h5 class="card-title">CAM1</h5>
+                <a href="#" class="btn btn-danger">Stop Process</a>
               </div>
             </div>
 
@@ -82,7 +50,41 @@
       </div>
     </div>
 
-  <div c lass="card">
+    <div class="card">
+      <div class="card-header" id="headingTwo">
+        <h2 class="mb-0">
+          <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+              <h2>New Process</h2>
+          </button>
+        </h2>
+      </div>
+      <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionExample">
+        <div class="card-body">
+          <div class="card-body">
+            <div class="card-deck">
+
+              <div class="card">
+                <div class="card-body">
+                  <h5 class="card-title">Local TIS Camera (Windows)</h5>
+                  <a href="#" class="btn btn-lg btn-success">New</a>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-body">
+                  <h5 class="card-title">Remote PWM (raspberry)</h5>
+                  <a href="#" class="btn btn-lg btn-success">New</a>
+                </div>
+              </div>
+
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div c lass="card">
     <div class="card-header" id="headingThree">
       <h2 class="mb-0">
         <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
@@ -127,8 +129,7 @@
       </div>
     </div>
   </div>
+  </div>
 </div>
-
-</div>
-
+</body>
 </html>
