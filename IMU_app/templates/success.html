@@ -1,0 +1,19 @@
+{%extends "base.html" %}
+{% block content %}
+<section class="jumbotron text-center">
+  <div class="container">
+    {% if success: %}
+    <div class="alert alert-success" role="alert">
+      <h4 class="alert-heading">Success !</h4>
+    {% else: %}
+    <div class="alert alert-danger" role="alert">
+      <h4 class="alert-heading">Failure</h4>
+    {% endif %}
+      <hr>
+      <p>{{message}}</p>
+    </div>
+    <a href="{{url_for('dashboard')}}" class="btn btn-lg btn-primary">Go back to the dashboard.</a>
+
+  </div>
+</section>
+{% endblock %}
