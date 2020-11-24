@@ -3,7 +3,7 @@ Main code for the application for data acquisition.
 
 Author: Romain Fayat, November 2020
 """
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, File, UploadFile, Form
 from fastapi.templating import Jinja2Templates
 from .rpi import RPI_connector
 from .helpers import read_config
@@ -24,6 +24,23 @@ async def dashboard(request: Request):
                                       context={"request": request})
 
 
+# Handle TIS cameras
+@app.get("/tis_camera_win")
+async def tis_cam_windows(request: Request):
+    "Return the file upload page for a TIS cam state file"
+    return templates.TemplateResponse("tis_camera_windows.html",
+                                      context={"request": request})
+
+
+@app.post("/tis_camera_win/upload")
+async def tis_cam_windows_upload(request: Request,
+                                 file: UploadFile = File(...),
+                                 cam_name: str = Form(...)):
+    "Upload a TIS cam state file"
+    return {"file_name": file.filename, "cam_name": cam_name}
+
+
+# Handle raspberry pi
 @app.get("/rpi/pwm")
 async def start_pwm():
     "Start PWM with the parameters stored in the config JSON"
