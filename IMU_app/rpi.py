@@ -54,6 +54,10 @@ class RPI_connector(paramiko.SSHClient):
         "Kill a process by pid"
         self.exec_command(f"kill {pid}")
 
+    def kill_all(self):
+        "Kill all python processes"
+        self.exec_command("killall python")
+
 
 if __name__ == '__main__':
     import time
