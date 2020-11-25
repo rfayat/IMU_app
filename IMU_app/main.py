@@ -9,6 +9,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from typing import Optional
 from .rpi import RPI_connector
+from . import helpers
 from .helpers import read_config, save_file
 
 
@@ -42,10 +43,25 @@ async def success(request: Request, success: bool, message: Optional[str]=""):
 
 
 # Handle TIS cameras
-@app.get("/tis_camera_win/upload_page")
+@app.get("/tis_camera_win")
 async def tis_cam_windows(request: Request):
+    "Return TIS camera selection page"
+    # Get all cam names and the path to their corresponding state file
+    available_state_files = {}  # came_name: state_file_path
+    for file_name in os.listdir(tis_saving_path):
+        if helpers.is_stored_state_file(file_name):
+            cam_name = helpers.cam_name_from_state_file(file_name)
+            state_file_path = os.path.sep.join([tis_saving_path, file_name])
+            available_state_files[cam_name] = state_file_path
+
+    # Render the camera selection page
+    context={"request": request, "state_files": available_state_files}
+    return templates.TemplateResponse("tis_camera_windows.html", context)
+
+@app.get("/tis_camera_win/upload_page")
+async def tis_cam_windows_upload_page(request: Request):
     "Return the file upload page for a TIS cam state file"
-    return templates.TemplateResponse("tis_camera_windows.html",
+    return templates.TemplateResponse("tis_camera_windows_upload.html",
                                       context={"request": request})
 
 
@@ -54,12 +70,18 @@ async def tis_cam_windows_upload(request: Request,
                                  state_file: UploadFile = File(...),
                                  cam_name: str = Form(...)):
     "Upload a TIS cam state file"
-    file_name = "_".join([cam_name, "state_file"])
+    file_name = helpers.state_file_from_cam_name(cam_name)
     saving_path = os.path.sep.join([tis_saving_path, file_name])
     save_file(state_file.file, saving_path)
     return {"file_name": state_file.filename, "cam_name": cam_name,
             "saving_path": saving_path}
 
+
+@app.post("/tis_camera_win/record")
+async def tis_cam_windows_record(request: Request,
+                                 state_file_path: str = Form(...),
+                                 selected_action: str = Form(...)):
+    return {"state_file_path": state_file_path, "selected_action": selected_action}
 
 # Handle raspberry pi
 @app.get("/rpi/pwm")

@@ -4,21 +4,21 @@
 <section class="jumbotron text-center">
   <div class="container">
     <h1>The Imaging Source for Windows</h1>
-    <h2>State file selection</h2>
-    <p class="lead text-muted">Select a state file, set the associated camera name and upload it.</p>
-    <div class="text-center">
+    <h2>Camera handler</h2>
+    <p class="lead text-muted">Select an available camera and start a recording.</p>
+    <div class="text-left">
 
-    <form action="{{url_for('tis_cam_windows_upload')}}" method="POST" enctype="multipart/form-data" id="state_file_form">
-      <!--<input type="text" class="form-control" name="cam_name" id="cam_name" placeholder="Camera Name" required/>-->
-
-      <select class="custom-select" name="cam_name" id="cam_name" form="state_file_form" required>
+    <form action="{{url_for('tis_cam_windows_record')}}" method="POST" enctype="multipart/form-data" id="state_file_form">
+      <select class="custom-select" name="state_file_path" id="state_file_path" form="state_file_form" required>
         <option value="">Camera Name</option>
-        <option value="CAM1">CAM0</option>
-        <option value="CAM1">CAM1</option>
+        {% for k, v in state_files.items() %}
+        <option value="{{v}}">{{k}}</option>
+        {% endfor %}
       </select>
-
-      <input type="file" class="form-control-file" name="state_file" id="state_file" required/>
-      <input type="submit" class="btn btn-primary"/>
+      <div class="btn-group mt-2" role="group">
+        <input type="submit" class="btn btn-primary" value="Start recording" name="selected_action" />
+        <input type="submit" class="btn btn-secondary" value="Preview" name="selected_action" />
+      </div>
     </form>
 
     </div>
