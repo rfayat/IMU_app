@@ -77,11 +77,15 @@ async def tis_cam_windows_upload(request: Request,
             "saving_path": saving_path}
 
 
+# TODO: Change to /tis_camera_win/cam_name/[record/kill/preview]
+# TODO: The finally statement of the script does not seem to be executed when running $ kill pid
 @app.post("/tis_camera_win/record")
 async def tis_cam_windows_record(request: Request,
                                  state_file_path: str = Form(...),
                                  selected_action: str = Form(...)):
-    return {"state_file_path": state_file_path, "selected_action": selected_action}
+    if selected_action == "Preview":
+        pid = helpers.start_tis_preview(state_file_path)
+    return {"state_file_path": state_file_path, "selected_action": selected_action, "pid": pid}
 
 # Handle raspberry pi
 @app.get("/rpi/pwm")

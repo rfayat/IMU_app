@@ -2,6 +2,7 @@
 import json
 import os
 import shutil
+import subprocess
 
 
 def read_config(config_path="./config.JSON"):
@@ -16,7 +17,7 @@ def save_file(file, destination_path):
     with open(destination_path, "wb") as buffer:
         shutil.copyfileobj(file, buffer)
 
-
+# TIS camera helpers
 def state_file_from_cam_name(cam_name: str):
     "Return the name which will be used to save the statfile for a camera"
     return f"{cam_name}_state_file"
@@ -37,3 +38,8 @@ def is_stored_state_file(file_name: str):
         return True
     else:
         return False
+
+def start_tis_preview(state_file_path):
+    "Start a live preview for an input state file"
+    p = subprocess.Popen(f"python -m IC_scripts.live_stream_from_statefile {state_file_path}")
+    return p.pid

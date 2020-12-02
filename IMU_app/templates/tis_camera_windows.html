@@ -3,11 +3,12 @@
 
 <section class="jumbotron text-center">
   <div class="container">
+
     <h1>The Imaging Source for Windows</h1>
     <h2>Camera handler</h2>
     <p class="lead text-muted">Select an available camera and start a recording.</p>
-    <div class="text-left">
 
+    <div class="text-left">
     <form action="{{url_for('tis_cam_windows_record')}}" method="POST" enctype="multipart/form-data" id="state_file_form">
       <select class="custom-select" name="state_file_path" id="state_file_path" form="state_file_form" required>
         <option value="">Camera Name</option>
@@ -16,12 +17,12 @@
         {% endfor %}
       </select>
       <div class="btn-group mt-2" role="group">
-        <input type="submit" class="btn btn-primary" value="Start recording" name="selected_action" />
+        <input type="submit" class="btn btn-success" value="Start recording" name="selected_action" />
         <input type="submit" class="btn btn-secondary" value="Preview" name="selected_action" />
       </div>
     </form>
-
     </div>
+    <p class="lead text-muted">Not finding your camera ? <a class="alert-link" href={{url_for('tis_cam_windows_upload_page')}}>Upload a new state file</a>.</p>
   </div>
 </section>
 
