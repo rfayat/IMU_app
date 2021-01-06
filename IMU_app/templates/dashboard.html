@@ -47,23 +47,43 @@
           <div class="card-body">
             <div class="card-deck">
 
+              <!--
               <div class="card">
                 <div class="card-body">
                   <h5 class="card-title">Local TIS Camera (Windows)</h5>
                   <a href="{{url_for('tis_cam_windows')}}" class="btn btn-lg btn-success">New</a>
                 </div>
               </div>
-
+              -->
+              {% for cam in available_cameras %}
               <div class="card">
                 <div class="card-body">
-                  <h5 class="card-title">Remote PWM (raspberry)</h5>
-                  <a href="#" class="btn btn-lg btn-success">New</a>
+                  <h5 class="card-title">{{cam["cam_name"]}}</h5>
+                  <h6 class="card-subtitle">Local TIS Camera (Windows)</h6>
+                  <br/>
+                  <a href="{{url_for("tis_cam_windows_preview", cam_name=cam["cam_name"])}}" class="btn btn-secondary">Preview</a>
+                  <a href="{{url_for("tis_cam_windows_record", cam_name=cam["cam_name"])}}" class="btn btn-success">Start recording</a>
                 </div>
               </div>
-
+              {% endfor %}
 
             </div>
+            {% for rpi in available_rpi %}
+            <div class="card-deck">
+              <div class="card">
+                <div class="card-body">
+                  <h5 class="card-title">{{rpi["description"]}}</h5>
+                  <h6 class="card-subtitle">{{rpi["extended_description"]}}</h6>
+                  <br/>
+                  <a href="/rpi/{{rpi["rpi_type"]}}/test_connection" class="btn btn-primary">Test connection</a>
+                  <a href="#" class="btn btn-success">Start</a>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+
           </div>
+          <p class="lead text-muted">Not finding your camera or needing to change its parameters ? <a class="alert-link" href={{url_for('tis_cam_windows_upload_page')}}>Upload a new state file</a>.</p>
         </div>
       </div>
     </div>

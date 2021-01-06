@@ -3,3 +3,5 @@ uvicorn
 python-multipart
 paramiko
 git+https://github.com/rfayat/dotenv_connector.git
+tinydb
+tinydb-serialization

@@ -10,8 +10,10 @@ from fastapi.templating import Jinja2Templates
 from typing import Optional
 from .rpi import RPI_connector
 from . import helpers
-from .helpers import read_config, save_file
+from .helpers import save_file, read_config
+from .database import AcquisitionDB
 
+db = AcquisitionDB()
 
 parameters = read_config()
 param_pwm = parameters["pwm"]
@@ -25,12 +27,21 @@ if not os.path.isdir(tis_saving_path):
 app = FastAPI()
 templates = Jinja2Templates(directory="IMU_app/templates/")
 
+# TODO "/" redirect to /dashboard if a session is running, to /new else
 
-@app.get("/")
+@app.get("/new")
+async def new_session(request: Request):
+    db.reinitialize()
+    # TODO: Add the animal and folder selection here
+    return RedirectResponse("/dashboard")
+
+@app.get("/dashboard")
 async def dashboard(request: Request):
     "Return the main dashboard"
-    return templates.TemplateResponse("dashboard.html",
-                                      context={"request": request})
+    context = {"request": request,
+               "available_cameras": db.get_available_cameras(),
+               "available_rpi": db.get_available_rpi()}
+    return templates.TemplateResponse("dashboard.html", context=context)
 
 
 @app.get("/success")
@@ -73,6 +84,7 @@ async def tis_cam_windows_upload(request: Request,
     file_name = helpers.state_file_from_cam_name(cam_name)
     saving_path = os.path.sep.join([tis_saving_path, file_name])
     save_file(state_file.file, saving_path)
+    db.initialize_tiscamera(saving_path)  # Logging in the database
     return {"file_name": state_file.filename, "cam_name": cam_name,
             "saving_path": saving_path}
 
@@ -87,7 +99,18 @@ async def tis_cam_windows_record(request: Request,
         pid = helpers.start_tis_preview(state_file_path)
     return {"state_file_path": state_file_path, "selected_action": selected_action, "pid": pid}
 
+
+@app.get("/tis_camera_win/{cam_name}/preview")
+async def tis_cam_windows_preview(cam_name: str):
+    return {"cam_name": cam_name, "action": "preview"}
+
+
+@app.get("/tis_camera_win/{cam_name}/record")
+async def tis_cam_windows_record(cam_name: str):
+    return {"cam_name": cam_name, "action": "record"}
+
 # Handle raspberry pi
+# TODO: Grab the parameters from the database rather than the config json
 @app.get("/rpi/pwm")
 async def start_pwm():
     "Start PWM with the parameters stored in the config JSON"
@@ -138,3 +161,18 @@ async def kill(pid: int):
     ssh.kill(pid)
     ssh.close()
     return {"message": "Killed process", "pid": pid}
+
+
+# Handle the rodents (TODO: create the UI for this)
+@app.get("/rodents/new/{rodent_name}/{sensor_id}")
+async def add_rodent(rodent_name: str, sensor_id: str):
+    "Add a new rodent and its sensor id to the rodents table"
+    db.add_rodent(rodent_name, sensor_id)
+    return {"message": f"Added {rodent_name} with sensor {sensor_id}"}
+
+
+@app.get("/rodents/remove/{rodent_name}")
+async def remove_rodent(rodent_name: str):
+    "Remove a rodent from the rodents table"
+    db.remove_rodent(rodent_name)
+    return {"message": f"Removed {rodent_name}"}

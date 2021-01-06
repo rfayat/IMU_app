@@ -9,11 +9,11 @@ class RPI_connector(paramiko.SSHClient):
     "Handle a raspberry pi remotely"
 
     @classmethod
-    def from_credentials(cls, host, port, username, password):
+    def from_credentials(cls, host, port, username, password, **kwargs):
         "Instanciate a SSH connexion from the login credentials"
         self = cls()
         self.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        self.connect(host, port, username, password)
+        self.connect(host, port, username, password, **kwargs)
         return self
 
     @classmethod
@@ -24,7 +24,7 @@ class RPI_connector(paramiko.SSHClient):
             self = cls.from_credentials(host, port, username, password)
             self.exec_command("ls")
             return True
-        except paramiko.ssh_exception.NoValidConnectionsError:
+        except (paramiko.ssh_exception.NoValidConnectionsError, TimeoutError):
             return False
 
     def exec_command(self, command):

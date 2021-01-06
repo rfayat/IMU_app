@@ -1,0 +1,61 @@
+{
+    "rodents": {
+        "1": {
+            "rodent_name": "RF001",
+            "sensor_id": "MPU2012B"
+        },
+        "2": {
+            "rodent_name": "RF002",
+            "sensor_id": "MPU2012D"
+        },
+        "3": {
+            "rodent_name": "RF003",
+            "sensor_id": "MPU2009A"
+        },
+        "4": {
+            "rodent_name": "RF004",
+            "sensor_id": "MPU2012G"
+        },
+        "5": {
+            "rodent_name": "RF005",
+            "sensor_id": "MPU2012E"
+        }
+    },
+    "rpi": {
+        "1": {
+            "ssh": {
+                "host": "129.199.28.170",
+                "username": "fayat",
+                "password": "ytm300ytm300",
+                "port": 22
+            },
+            "path": "Documents/IMU_setup/software/camera_trigger/rpi/run_pwm.py",
+            "options": {
+                "frequency": 1.0,
+                "pin": 24,
+                "duty_cycle": 50
+            },
+            "rpi_type": "pwm",
+            "active_processes": [],
+            "description": "PWM RPI",
+            "extended_description": "Host: 129.199.28.170\n Parameters: frequency: 1.0, pin: 24, duty_cycle: 50"
+        }
+    },
+    "tis_cam_win": {
+        "1": {
+            "cam_name": "CAM0",
+            "state_file_path": ".tmp\\CAM0_state_file",
+            "active_processes": []
+        },
+        "2": {
+            "cam_name": "CAM1",
+            "state_file_path": ".tmp\\CAM1_state_file",
+            "active_processes": []
+        },
+        "3": {
+            "cam_name": "CAM3",
+            "state_file_path": ".tmp\\CAM3_state_file",
+            "active_processes": []
+        }
+    }
+}

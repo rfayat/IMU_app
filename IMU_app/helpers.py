@@ -3,9 +3,10 @@ import json
 import os
 import shutil
 import subprocess
+from pathlib import Path
 
 
-def read_config(config_path="./config.JSON"):
+def read_config(config_path="./config.json"):
     "Read the JSON configuration file"
     with open(config_path) as f:
         config = json.load(f)
@@ -25,6 +26,8 @@ def state_file_from_cam_name(cam_name: str):
 
 def cam_name_from_state_file(state_file: str):
     "Return the camera name from the state file name"
+    if isinstance(state_file, Path):
+        state_file = state_file.name
     return state_file.rstrip("_state_file")
 
 
@@ -34,10 +37,12 @@ def is_stored_state_file(file_name: str):
     Could be extended to check if the content of the file corresponds to a
     state file (this would also be useful when uploading the file).
     """
-    if file_name.endswith("_state_file"):
-        return True
-    else:
-        return False
+    # Convert to string if a Path is provided
+    if isinstance(file_name, Path):
+        file_name = file_name.name
+
+    return file_name.endswith("_state_file")
+
 
 def start_tis_preview(state_file_path):
     "Start a live preview for an input state file"
