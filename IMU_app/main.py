@@ -4,7 +4,7 @@ Main code for the application for data acquisition.
 Author: Romain Fayat, November 2020
 """
 import os
-from fastapi import FastAPI, Request, File, UploadFile, Form
+from fastapi import FastAPI, Request, File, UploadFile, Form, status
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from typing import Optional
@@ -13,8 +13,12 @@ from . import helpers
 from .helpers import save_file, read_config
 from .database import AcquisitionDB
 
+# TinyDB database
 db = AcquisitionDB()
 
+# Read the configuration file and extract:
+# - The loggin information to the PWM-RPI (host name, username...)
+# - The path to the camera configuration files
 parameters = read_config()
 param_pwm = parameters["pwm"]
 param_tis_win = parameters["tis_camera_win"]
@@ -24,16 +28,18 @@ tis_saving_path = param_tis_win["saving_path"]
 if not os.path.isdir(tis_saving_path):
     os.makedirs(tis_saving_path)
 
+# Initialize the app
 app = FastAPI()
 templates = Jinja2Templates(directory="IMU_app/templates/")
 
-# TODO "/" redirect to /dashboard if a session is running, to /new else
 
+# TODO "/" redirect to /dashboard if a session is running, to /new else
 @app.get("/new")
 async def new_session(request: Request):
-    db.reinitialize()
+    db.reinitialize()  # Clear the data from the last session
     # TODO: Add the animal and folder selection here
     return RedirectResponse("/dashboard")
+
 
 @app.get("/dashboard")
 async def dashboard(request: Request):
@@ -50,24 +56,19 @@ async def success(request: Request, success: bool, message: Optional[str]=""):
     return templates.TemplateResponse("success.html",
                                       context={"request": request,
                                                "success": success,
-                                                "message": message})
+                                               "message": message})
 
 
 # Handle TIS cameras
 @app.get("/tis_camera_win")
 async def tis_cam_windows(request: Request):
     "Return TIS camera selection page"
-    # Get all cam names and the path to their corresponding state file
-    available_state_files = {}  # came_name: state_file_path
-    for file_name in os.listdir(tis_saving_path):
-        if helpers.is_stored_state_file(file_name):
-            cam_name = helpers.cam_name_from_state_file(file_name)
-            state_file_path = os.path.sep.join([tis_saving_path, file_name])
-            available_state_files[cam_name] = state_file_path
-
+    # Get names of the available cameras
+    available_cameras = db.get_available_cameras()
     # Render the camera selection page
-    context={"request": request, "state_files": available_state_files}
+    context={"request": request, "available_cameras": available_cameras}
     return templates.TemplateResponse("tis_camera_windows.html", context)
+
 
 @app.get("/tis_camera_win/upload_page")
 async def tis_cam_windows_upload_page(request: Request):
@@ -89,25 +90,36 @@ async def tis_cam_windows_upload(request: Request,
             "saving_path": saving_path}
 
 
-# TODO: Change to /tis_camera_win/cam_name/[record/kill/preview]
 # TODO: The finally statement of the script does not seem to be executed when running $ kill pid
-@app.post("/tis_camera_win/record")
-async def tis_cam_windows_record(request: Request,
-                                 state_file_path: str = Form(...),
+@app.post("/tis_camera_win/action")
+async def tis_cam_windows_action(request: Request,
+                                 cam_name: str = Form(...),
                                  selected_action: str = Form(...)):
     if selected_action == "Preview":
-        pid = helpers.start_tis_preview(state_file_path)
-    return {"state_file_path": state_file_path, "selected_action": selected_action, "pid": pid}
+        return RedirectResponse(f"/tis_camera_win/{cam_name}/preview",
+                                status_code=status.HTTP_303_SEE_OTHER)
+    if selected_action == "Start recording":
+        return RedirectResponse(f"/tis_camera_win/{cam_name}/record",
+                                status_code=status.HTTP_303_SEE_OTHER)
 
 
 @app.get("/tis_camera_win/{cam_name}/preview")
 async def tis_cam_windows_preview(cam_name: str):
-    return {"cam_name": cam_name, "action": "preview"}
+    "Start a TIS camera preview from a cam_name"
+    pid = helpers.start_tis_preview(cam_name)
+    db.add_tis_cam_process(cam_name, "preview", pid)
+    return {"cam_name": cam_name, "action": "preview", "pid": pid}
 
 
 @app.get("/tis_camera_win/{cam_name}/record")
 async def tis_cam_windows_record(cam_name: str):
-    return {"cam_name": cam_name, "action": "record"}
+    "Start a TIS camera recording from a cam_name"
+    # TODO: Implement + add file name
+    # pid = ...
+    pid = 43
+    db.add_tis_cam_process(cam_name, "record", pid)
+    return {"cam_name": cam_name, "action": "record", "pid": pid}
+
 
 # Handle raspberry pi
 # TODO: Grab the parameters from the database rather than the config json
@@ -165,6 +177,7 @@ async def kill(pid: int):
 
 # Handle the rodents (TODO: create the UI for this)
 @app.get("/rodents/new/{rodent_name}/{sensor_id}")
+@app.put("/rodents/{rodent_name}/{sensor_id}")
 async def add_rodent(rodent_name: str, sensor_id: str):
     "Add a new rodent and its sensor id to the rodents table"
     db.add_rodent(rodent_name, sensor_id)
@@ -172,6 +185,7 @@ async def add_rodent(rodent_name: str, sensor_id: str):
 
 
 @app.get("/rodents/remove/{rodent_name}")
+@app.delete("/rodents/{rodent_name}")
 async def remove_rodent(rodent_name: str):
     "Remove a rodent from the rodents table"
     db.remove_rodent(rodent_name)

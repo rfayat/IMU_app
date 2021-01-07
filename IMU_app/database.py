@@ -48,6 +48,15 @@ class PathSerializer(Serializer):
         return Path(s)
 
 
+def append_to_list(key, value_to_append):
+    "Custom operation to be used with db.update to append a value to a list"
+    def transform(doc):
+        "Append an element to the list specified by key in doc"
+        doc[key].append(value_to_append)
+        return doc
+    return transform
+
+
 class AcquisitionDB(TinyDB):
     "Enhanced tinydb database for storing the output of offset computations"
 
@@ -127,6 +136,17 @@ class AcquisitionDB(TinyDB):
     def get_available_cameras(self):
         "Return the cameras without any ongoing process"
         return self.tis_cam_win_table.search(where("active_processes")==[])
+
+    def add_tis_cam_process(self, cam_name: str, action: str, pid: int):
+        "Add an active process to a tis camera"
+        description = f"TIS Camera {action} on {cam_name} (pid: {pid})"
+        new_active_process = {"action": action,
+                              "pid": pid,
+                              "description": description}
+        cam_query = where("cam_name") == cam_name  # selection of the camera
+        self.tis_cam_win_table.update(
+            append_to_list("active_processes", new_active_process), cam_query
+        )
 
     def get_available_rpi(self):
         "Return the rpi without any ongoing process"

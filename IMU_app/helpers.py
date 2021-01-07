@@ -44,7 +44,8 @@ def is_stored_state_file(file_name: str):
     return file_name.endswith("_state_file")
 
 
-def start_tis_preview(state_file_path):
+def start_tis_preview(cam_name):
     "Start a live preview for an input state file"
-    p = subprocess.Popen(f"python -m IC_scripts.live_stream_from_statefile {state_file_path}")
+    state_file_path = state_file_from_cam_name(cam_name)
+    p = subprocess.Popen(f"python -m IC_scripts.live_stream_from_statefile {state_file_path}", shell=True)
     return p.pid

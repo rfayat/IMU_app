@@ -9,6 +9,10 @@ $ git clone https://github.com/rfayat/IMU_setup.git
 $ cd IMU_setup/software/IMU_app
 $ pip install -r requirements
 ```
+
+Install [IC_trigger]() for windows.
+
+
 ### Start the app
 Using uvicorn:
 ```bash
