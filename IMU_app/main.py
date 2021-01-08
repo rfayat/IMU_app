@@ -47,7 +47,8 @@ async def dashboard(request: Request):
     "Return the main dashboard"
     context = {"request": request,
                "available_cameras": db.get_available_cameras(),
-               "available_rpi": db.get_available_rpi()}
+               "available_rpi": db.get_available_rpi(),
+               "local_active_processes": db.get_local_active_processes()}
     return templates.TemplateResponse("dashboard.html", context=context)
 
 

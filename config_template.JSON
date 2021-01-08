@@ -1,5 +1,5 @@
 {
-  "dotenv": ".my_variables",
+  "data_folder": "C:\\path\\to\\saving\\data",
   "pwm": {
     "ssh": {
       "host": "XXX.XXX.XX.XXX",
@@ -15,6 +15,6 @@
     }
   },
   "tis_camera_win": {
-    "saving_path": ".tmp"
+    "saving_path": "C:\\path\\to\\statefiles"
   }
 }

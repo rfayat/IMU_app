@@ -14,19 +14,17 @@
         <div class="card-body">
           <div class="card-deck">
 
-            <div class="card" style="width: 18rem;">
+            {% for process_content in local_active_processes.values() %}
+            <div class="card">
               <div class="card-body">
-                <h5 class="card-title">CAM0</h5>
-                <a href="#" class="btn btn-danger">Stop Process</a>
+                <h5 class="card-title">Local Process {{process_content["pid"]}}</h5>
+                <h6 class="card-subtitle">{{process_content["description"]}}</h6>
+                <br/>
+                <a href="{{url_for("kill_by_pid", pid=process_content["pid"])}}" class="btn btn-danger">Kill Process</a>
               </div>
             </div>
+            {% endfor %}
 
-            <div class="card" style="width: 18rem;">
-              <div class="card-body">
-                <h5 class="card-title">CAM1</h5>
-                <a href="#" class="btn btn-danger">Stop Process</a>
-              </div>
-            </div>
 
 
           </div>
@@ -47,14 +45,6 @@
           <div class="card-body">
             <div class="card-deck">
 
-              <!--
-              <div class="card">
-                <div class="card-body">
-                  <h5 class="card-title">Local TIS Camera (Windows)</h5>
-                  <a href="{{url_for('tis_cam_windows')}}" class="btn btn-lg btn-success">New</a>
-                </div>
-              </div>
-              -->
               {% for cam in available_cameras %}
               <div class="card">
                 <div class="card-body">

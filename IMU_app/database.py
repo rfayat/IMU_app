@@ -134,7 +134,6 @@ class AcquisitionDB(TinyDB):
         for table_name in ["tis_cam_win"]:
             self.remove_local_process_from_table(table_name, pid)
 
-
     def remove_local_process_from_table(self, table_name: str, pid: int):
         "Delete a pid from the active process dict of a given table"
         # Select the target table
@@ -146,6 +145,18 @@ class AcquisitionDB(TinyDB):
         # Pop the pid from the active_processes dict where it can be found
         operation = pop_element("active_processes", str(pid))
         target_table.update(operation, has_selected_pid)
+
+    def get_processes_from_table(self, table_name:str):
+        "Get all local processes from a table"
+        # Grab all elements of the table that have active processes
+        selected_table = self.table(table_name, cache_size=0)
+        has_active_processes = where("active_processes") != {}
+        elem_with_active_processes = selected_table.search(has_active_processes)  # noqa E501
+        # Loop through the elements with active processes
+        active_processes = {}
+        for e in elem_with_active_processes:
+            active_processes.update(e["active_processes"])
+        return active_processes
 
     def initialize_tiscamera(self, state_file_path):
         "Initialize a camera in the tis_cam_win table"
@@ -184,6 +195,13 @@ class AcquisitionDB(TinyDB):
         "Return the names of the cameras without any ongoing process"
         available_cameras = self.get_available_cameras()
         return [c["cam_name"] for c in available_cameras]
+
+    def get_local_active_processes(self):
+        "Get all local active processes as a dict with key str(pid)"
+        active_processes = {}
+        for table_name in ["tis_cam_win"]:
+            active_processes.update(self.get_processes_from_table(table_name))
+        return active_processes
 
     def get_state_file_path(self, cam_name):
         "Return the path to the state file of a given camera"
