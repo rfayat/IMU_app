@@ -9,17 +9,18 @@ from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from typing import Optional
 from .rpi import RPI_connector
+from . import tis_camera_win
 from . import helpers
-from .helpers import save_file, read_config
 from .database import AcquisitionDB
 
 # TinyDB database
 db = AcquisitionDB()
+processes = {}
 
 # Read the configuration file and extract:
 # - The loggin information to the PWM-RPI (host name, username...)
 # - The path to the camera configuration files
-parameters = read_config()
+parameters = helpers.read_config()
 param_pwm = parameters["pwm"]
 param_tis_win = parameters["tis_camera_win"]
 
@@ -59,6 +60,14 @@ async def success(request: Request, success: bool, message: Optional[str]=""):
                                                "message": message})
 
 
+@app.get("/kill/{pid}")
+async def kill_by_pid(pid: int):
+    "Kill a local process using its process ID"
+    helpers.kill_by_pid(pid)
+    db.remove_local_process(pid)
+    return {"pid": pid, "message": f"Killed process {pid}"}
+
+
 # Handle TIS cameras
 @app.get("/tis_camera_win")
 async def tis_cam_windows(request: Request):
@@ -82,9 +91,9 @@ async def tis_cam_windows_upload(request: Request,
                                  state_file: UploadFile = File(...),
                                  cam_name: str = Form(...)):
     "Upload a TIS cam state file"
-    file_name = helpers.state_file_from_cam_name(cam_name)
+    file_name = tis_camera_win.state_file_from_cam_name(cam_name)
     saving_path = os.path.sep.join([tis_saving_path, file_name])
-    save_file(state_file.file, saving_path)
+    helpers.save_file(state_file.file, saving_path)
     db.initialize_tiscamera(saving_path)  # Logging in the database
     return {"file_name": state_file.filename, "cam_name": cam_name,
             "saving_path": saving_path}
@@ -106,7 +115,8 @@ async def tis_cam_windows_action(request: Request,
 @app.get("/tis_camera_win/{cam_name}/preview")
 async def tis_cam_windows_preview(cam_name: str):
     "Start a TIS camera preview from a cam_name"
-    pid = helpers.start_tis_preview(cam_name)
+    state_file_path = db.get_state_file_path(cam_name)
+    pid = tis_camera_win.start_tis_preview(state_file_path=state_file_path)
     db.add_tis_cam_process(cam_name, "preview", pid)
     return {"cam_name": cam_name, "action": "preview", "pid": pid}
 
