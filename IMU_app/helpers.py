@@ -4,22 +4,24 @@ import shutil
 import signal
 import os
 import subprocess
+from datetime import datetime
 
 
+# File handling helpers
 def read_config(config_path="./config.json"):
     "Read the JSON configuration file"
     with open(config_path) as f:
         config = json.load(f)
     return config
 
-
 def save_file(file, destination_path):
     "Save a binary file to a selected file"
     with open(destination_path, "wb") as buffer:
         shutil.copyfileobj(file, buffer)
 
-# WARNING: The finally clauses of python scripts doesn't seem to be executed
 
+# Process management
+# WARNING: The finally clauses of python scripts doesn't seem to be executed
 # def kill_by_pid(pid: int):
 #     "Kill a local process using its pid"
 #     try:
@@ -32,3 +34,16 @@ def kill_by_pid(pid: int):
     # sometimes need to call taskkill twice for it to work
     for i in range(2):
         subprocess.call(["taskkill", "/PID", str(pid)])
+
+
+# Date helpers
+def now_as_str():
+    "Return the current date and time as a string"
+    current_time = datetime.now()
+    return current_time.strftime("%Y%m%d-%H:%M:%S")
+
+
+def today_as_str():
+    "Return the current date and time as a string"
+    current_time = datetime.now()
+    return current_time.strftime("%Y%m%d")

@@ -1,11 +1,16 @@
 """Handling of the tinydb database for run time variables.
 
+TODO: Modularize the database so that we can easily add new tables etc.
+      E.G. create a class TIS_CAM_DB with all methods related to the TIS
+      camera table and make AcquisitionDB inherit from it.
+
 Author: Romain Fayat, January 2021
 """
 from pathlib import Path, WindowsPath
 from datetime import datetime
 from .helpers import read_config
 from . import tis_camera_win
+from . import session
 
 from tinydb import TinyDB, where, Query
 # Serializer
@@ -109,25 +114,73 @@ class AcquisitionDB(TinyDB):
 
     @property
     def tis_cam_win_table(self):
+        "Table containing the TIS cameras properties and active processes"
         return self.table("tis_cam_win")
 
+    @property
+    def session_table(self):
+        "Table containining the current session's blocks properties"
+        return self.table("session")
+
+    # TODO: Would be nice to have a centralized process table
     # @property
     # def local_processes_table(self):
     #     return self.table("tis_cam_win", cache_size=0)
 
+    # Initialization
     def reinitialize(self):
         "Reinitialize the database for a new session using the config file"
-        config = read_config()
+        # TODO: Only save if the session was running
+        # Save the data linked to the last recording to the corresponding folder
+        self.save_in_recording_folder()
+        # Default values for the session parameters
+        self.reinitialize_session()
+        # Default values  for the raspberry parameters
+        self.reinitialize_rpi()
+        # Default values for the tis camera parameters
+        self.reinitialize_tis_cam_win()
 
-        # Insert the raspberry parameters
+    def reinitialize_rpi(self):
+        "Reinitialize the rpi table"
+        # TODO: Kill all ongoing processes
         self.drop_table("rpi")
         self.initialize_rpi_pwm()
 
-        # Insert the tis camera parameters
+    def reinitialize_tis_cam_win(self):
+        "Reinitialize the TIS camera for windows table"
+        # TODO: Kill all ongoing processes
+        config = read_config()
         self.drop_table("tis_cam_win")
+        # Use the state files to infer the available cameras
         state_file_folder = Path(config["tis_camera_win"]["saving_path"])
-        for p in state_file_folder.iterdir():
-            self.initialize_tiscamera(p)
+        for state_file_path in state_file_folder.iterdir():
+            self.initialize_tiscamera(state_file_path)
+
+    def reinitialize_session(self):
+        "Reinitialize the session table"
+        self.drop_table("session")
+
+    def save_in_recording_folder(self):
+        "Save the current tinydb json to the recording folder"
+        # TODO
+        pass
+
+    # Session handling
+    def insert_active_block(self, *args, **kwargs):
+        "Set all active blocks to inactive and insert an active block"
+        # Set all other blocks to inactive
+        Q = Query()
+        self.session_table.upsert({"running": False}, Q.running.exists())
+        # Insert a new block in the session table
+        self.session_table.insert(*args, **kwargs)
+
+    def get_session_properties(self):
+        "Grab the session properties from the first block"
+        first_block = self.session_table.get(where("block_id") == "01")
+        session_properties = ["date", "data_folder", "user_name",
+                              "rodent_name", "session_folder",
+                              "session_notes", "session_path"]
+        return {k: first_block[k] for k in session_properties}
 
     # Process handling
     def remove_local_process(self, pid: int):

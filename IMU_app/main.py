@@ -8,10 +8,12 @@ from fastapi import FastAPI, Request, File, UploadFile, Form, status
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from typing import Optional
+from pathlib import Path
 from .rpi import RPI_connector
 from . import tis_camera_win
 from . import helpers
 from .database import AcquisitionDB
+from . import session
 
 # TinyDB database
 db = AcquisitionDB()
@@ -34,14 +36,59 @@ app = FastAPI()
 templates = Jinja2Templates(directory="IMU_app/templates/")
 
 
-# TODO "/" redirect to /dashboard if a session is running, to /new else
-@app.get("/new")
+@app.get("/")
+async def home():
+    "Redirect to /dashboard if a session is running, to /new_session else"
+    RedirectResponse(f"/new_session")
+
+@app.get("/new_session")
 async def new_session(request: Request):
     db.reinitialize()  # Clear the data from the last session
-    # TODO: Add the animal and folder selection here
-    return RedirectResponse("/dashboard")
+
+    users = db.table("users").all()
+    rodents = db.table("rodents").all()
+    default_block = session.create_default_block()
+
+    context = {"request": request,
+               "users": users,
+               "rodents": rodents,
+               **default_block}
+    return templates.TemplateResponse("new_session.html", context=context)
 
 
+@app.post("/create_new_session")
+async def create_new_session(request: Request,
+                             user_name: str = Form(...),
+                             rodent_name: str = Form(...),
+                             data_folder: str = Form(...),
+                             session_folder: str = Form(...),
+                             session_notes: str = Form(""),
+                             block_folder: str = Form(...),
+                             block_notes: str = Form("")):
+
+    # Create the session and block folder architecture
+    session_path = Path(data_folder).joinpath(session_folder)
+    session.create_session_folder(session_path)
+
+    block_path = session_path.joinpath(block_folder)
+    session.create_block_folder(block_path)
+
+    # Create the content that will be uploaded to the session table
+    block_content = session.create_default_block()
+    block_content.update({
+        "user_name": user_name,
+        "rodent_name": rodent_name,
+        "data_folder": data_folder,
+        "session_folder": session_folder,
+        "session_notes": session_notes,
+        "block_folder": block_folder,
+        "block_notes": block_notes,
+        "session_path": str(session_path),
+        "block_path": str(block_path),
+        })
+
+    db.insert_active_block(block_content)
+    return block_content
 @app.get("/dashboard")
 async def dashboard(request: Request):
     "Return the main dashboard"
