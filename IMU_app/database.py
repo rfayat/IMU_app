@@ -12,9 +12,11 @@ from tinydb import TinyDB, where, Query
 from tinydb_serialization import Serializer
 from tinydb_serialization import SerializationMiddleware
 
+TinyDB.DEFAULT_TABLE_KWARGS = {'cache_size': 0}
 PATH_DATABASE = ".db.json"
 PATH_CONFIG = "config.json"
 
+# Serializer doesn't seem to be working recursively in the tables
 class DateTimeSerializer(Serializer):
     "Serializer for storing datetime.datetime objects using tinydb"
 
@@ -32,7 +34,6 @@ class DateTimeSerializer(Serializer):
     def decode(self, s):
         "Convert from string to datetime using the custom datetime format"
         return datetime.strptime(s, self.date_format)
-
 
 class PathSerializer(Serializer):
     "Serializer for storing pathlib.Path objects using tinydb"
@@ -104,11 +105,11 @@ class AcquisitionDB(TinyDB):
     @property
     def rpi_table(self):
         "Table used for storing the rpi parameters and ongoing processes"
-        return self.table("rpi", cache_size=0)
+        return self.table("rpi")
 
     @property
     def tis_cam_win_table(self):
-        return self.table("tis_cam_win", cache_size=0)
+        return self.table("tis_cam_win")
 
     # @property
     # def local_processes_table(self):
@@ -128,6 +129,7 @@ class AcquisitionDB(TinyDB):
         for p in state_file_folder.iterdir():
             self.initialize_tiscamera(p)
 
+    # Process handling
     def remove_local_process(self, pid: int):
         "Delete a local process matching a pid from the active process dicts"
         # Table names where local active processes can be found
@@ -158,6 +160,14 @@ class AcquisitionDB(TinyDB):
             active_processes.update(e["active_processes"])
         return active_processes
 
+    def get_local_active_processes(self):
+        "Get all local active processes as a dict with key str(pid)"
+        active_processes = {}
+        for table_name in ["tis_cam_win"]:
+            active_processes.update(self.get_processes_from_table(table_name))
+        return active_processes
+
+    # TIS camera handling
     def initialize_tiscamera(self, state_file_path):
         "Initialize a camera in the tis_cam_win table"
         if tis_camera_win.is_stored_state_file(state_file_path):
@@ -167,6 +177,34 @@ class AcquisitionDB(TinyDB):
                          "active_processes": {}}
             self.tis_cam_win_table.upsert(cam_entry, where("cam_name")==cam_name)
 
+    def get_available_cameras(self):
+        "Return the cameras without any ongoing process"
+        return self.tis_cam_win_table.search(where("active_processes")=={})
+
+    def get_available_cameras_names(self):
+        "Return the names of the cameras without any ongoing process"
+        available_cameras = self.get_available_cameras()
+        return [c["cam_name"] for c in available_cameras]
+
+    def get_state_file_path(self, cam_name):
+        "Return the path to the state file of a given camera"
+        cam_query = where("cam_name")==cam_name
+        cam_entry = self.tis_cam_win_table.get(cam_query)
+        return cam_entry["state_file_path"]
+
+    def add_tis_cam_process(self, cam_name: str, action: str, pid: int):
+        "Add an active process to a tis camera"
+        description = f"TIS Camera {action} on {cam_name} (pid: {pid})"
+        new_active_process_content = {"action": action,
+                                      "pid": pid,
+                                      "description": description}
+        new_active_process = {pid: new_active_process_content}
+        cam_query = where("cam_name") == cam_name  # selection of the camera
+        self.tis_cam_win_table.update(
+            update_dict("active_processes", new_active_process), cam_query
+        )
+
+    # RPI handling
     def initialize_rpi_pwm(self):
         "Initialize the PWM raspberry PI"
         config = read_config()
@@ -187,40 +225,6 @@ class AcquisitionDB(TinyDB):
                             "extended_description": extended_description})
         self.rpi_table.insert(process_pwm)
 
-    def get_available_cameras(self):
-        "Return the cameras without any ongoing process"
-        return self.tis_cam_win_table.search(where("active_processes")=={})
-
-    def get_available_cameras_names(self):
-        "Return the names of the cameras without any ongoing process"
-        available_cameras = self.get_available_cameras()
-        return [c["cam_name"] for c in available_cameras]
-
-    def get_local_active_processes(self):
-        "Get all local active processes as a dict with key str(pid)"
-        active_processes = {}
-        for table_name in ["tis_cam_win"]:
-            active_processes.update(self.get_processes_from_table(table_name))
-        return active_processes
-
-    def get_state_file_path(self, cam_name):
-        "Return the path to the state file of a given camera"
-        cam_query = where("cam_name")==cam_name
-        cam_entry = self.tis_cam_win_table.get(cam_query)
-        return cam_entry["state_file_path"]
-
-    def add_tis_cam_process(self, cam_name: str, action: str, pid: int):
-        "Add an active process to a tis camera"
-        description = f"TIS Camera {action} on {cam_name} (pid: {pid})"
-        new_active_process_content = {"action": action,
-                                      "pid": pid,
-                                      "description": description}
-        new_active_process = {pid: new_active_process_content}
-        cam_query = where("cam_name") == cam_name  # selection of the camera
-        self.tis_cam_win_table.update(
-            update_dict("active_processes", new_active_process), cam_query
-        )
-
     def get_available_rpi(self):
         "Return the rpi without any ongoing process"
         return self.rpi_table.search(where("active_processes")=={})
@@ -228,7 +232,7 @@ class AcquisitionDB(TinyDB):
     # Management of the rodent database
     def add_rodent(self, rodent_name, sensor_id):
         "Add a new rodent and its sensor id to the rodents table"
-        rodents_table = self.table("rodents", cache_size=0)
+        rodents_table = self.table("rodents")
         rodent_data = {"rodent_name": rodent_name, "sensor_id": sensor_id}
         rodents_table.upsert(rodent_data, where("rodent_name")==rodent_name)
 
@@ -236,3 +240,15 @@ class AcquisitionDB(TinyDB):
         "Remove a rodent from the rodents table"
         rodents_table = self.table("rodents", cache_size=0)
         rodents_table.remove(where("rodent_name")==rodent_name)
+
+    # Management of the user database
+    def add_user(self, user_name):
+        "Add a new user to the user table"
+        user_table = self.table("users")
+        user_data = {"user_name": user_name}
+        user_table.upsert(user_data, where("user_name")==user_name)
+
+    def remove_user(self, user_name):
+        "Remove an user from the user table"
+        user_table = self.table("users")
+        user_table.remove(where("user_name")==user_name)

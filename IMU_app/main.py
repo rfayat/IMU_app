@@ -201,3 +201,20 @@ async def remove_rodent(rodent_name: str):
     "Remove a rodent from the rodents table"
     db.remove_rodent(rodent_name)
     return {"message": f"Removed {rodent_name}"}
+
+
+# Handle the users (TODO: create the UI for this)
+@app.get("/users/new/{user_name}")
+@app.put("/users/{user_name}")
+async def add_user(user_name: str):
+    "Add a new user to the users table"
+    db.add_user(user_name)
+    return {"message": f"Added {user_name}"}
+
+
+@app.get("/users/remove/{user_name}")
+@app.delete("/users/{user_name}")
+async def remove_user(user_name: str):
+    "Remove a user from the users table"
+    db.remove_user(user_name)
+    return {"message": f"Removed {user_name}"}
