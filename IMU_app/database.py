@@ -168,9 +168,10 @@ class AcquisitionDB(TinyDB):
     # Session handling
     def insert_active_block(self, *args, **kwargs):
         "Set all active blocks to inactive and insert an active block"
-        # Set all other blocks to inactive
-        Q = Query()
-        self.session_table.upsert({"running": False}, Q.running.exists())
+        if len(self.session_table) != 0:
+            # Set all other blocks to inactive
+            Q = Query()
+            self.session_table.upsert({"running": False}, Q.running.exists())
         # Insert a new block in the session table
         self.session_table.insert(*args, **kwargs)
 

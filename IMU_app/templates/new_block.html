@@ -1,0 +1,91 @@
+{%extends "base.html" %}
+{% block content %}
+
+<section class="jumbotron text-center">
+  <div class="container">
+    <h1>Block manager</h1>
+    <p class="lead text-muted">Fill in the following fields to create a new block</p>
+    <div class="text-left">
+      <form action="{{url_for('create_new_block')}}" method="POST" enctype="multipart/form-data" id="new_block_form">
+
+        <div class="row">
+          <div class="col">
+            <div class="form-group" id="user_name_group">
+              <label for="user_name">User Name</label>
+              <text class="form-control" name="user_name" value="{{user_name}}" readonly>{{user_name}}</text>
+            </div>
+          </div>
+
+          <div class="col">
+            <div class="form-group" id="rodent_name_group">
+          <label for="rodent_name">Rodent</label>
+          <text class="form-control" name="rodent_name" value="{{rodent_name}}" readonly>{{rodent_name}}</text>
+        </div>
+          </div>
+        </div>
+
+        <div class="form-group" id="block_name_postpend_group">
+          <label for="block_name_postpend">Block Name Postpend</label>
+          <input class="form-control" type="text" name="block_name_postpend" id="block_name_postpend" onkeyup="updateBlockFolder()"></input>
+        </div>
+
+        <input class="form-control" type="hidden" name="data_folder" value="{{data_folder}}"></input>
+        <input class="form-control" type="hidden" name="session_folder" id="session_folder" value="{{session_folder}}"></input>
+        <input class="form-control" type="hidden" name="block_folder" id="block_folder"></input>
+
+        <p class="lead text-muted">
+          The session will be saved in:
+          <b><br>
+            {{data_folder + "\\" + session_folder}}
+          </b>
+        </p>
+
+        <p class="lead text-muted">
+          This new block will be saved in:
+          <b><br>
+           {{data_folder}}\<span id="displayed_block_folder"></span>
+          </b>
+        </p>
+
+        <div class="form-group" id="session_notes_group">
+          <label for="session_notes">Session Notes</label>
+          <textarea class="form-control" name="session_notes" id="session_notes" rows="3" value="{{session_notes}}" readonly>{{session_notes}}</textarea>
+        </div>
+
+
+        <div class="form-group" id="block_notes_group">
+          <label for="block_notes">Block Notes</label>
+          <textarea class="form-control" name="block_notes" id="block_notes" placeholder="Add Notes Here" rows="3"></textarea>
+        </div>
+
+
+        <button type="submit" class="btn btn-primary">Create Block</button>
+      </form>
+      </div>
+  </div>
+</section>
+
+
+<script type="text/javascript">
+    updateBlockFolder();
+
+    function updateBlockFolder(){
+      session_folder_name = document.getElementById("session_folder").value;
+      postpend = document.getElementById("block_name_postpend").value;
+
+      block_folder_name = session_folder_name + "_" + "{{block_id}}";
+      if (postpend!=""){
+        block_folder_name = block_folder_name + "_" + postpend;
+      }
+
+      blockFolderElement = document.getElementById("block_folder");
+      blockFolderElement.value = block_folder_name;
+
+      document.getElementById("displayed_block_folder").textContent = session_folder_name + "\\" + block_folder_name;
+    }
+
+
+</script>
+
+
+{% endblock %}

@@ -43,8 +43,6 @@ async def home():
 
 @app.get("/new_session")
 async def new_session(request: Request):
-    db.reinitialize()  # Clear the data from the last session
-
     users = db.table("users").all()
     rodents = db.table("rodents").all()
     default_block = session.create_default_block()
@@ -56,6 +54,19 @@ async def new_session(request: Request):
     return templates.TemplateResponse("new_session.html", context=context)
 
 
+@app.get("/new_block")
+async def new_block(request: Request):
+    block_id = f"{len(db.session_table) + 1 :02d}"
+    session_properties = db.get_session_properties()
+    block_properties = session.create_default_block(block_id=block_id)
+    context = {
+        "request": request,
+        **session_properties,
+        **block_properties,
+    }
+    return templates.TemplateResponse("new_block.html", context=context)
+
+
 @app.post("/create_new_session")
 async def create_new_session(request: Request,
                              user_name: str = Form(...),
@@ -65,6 +76,7 @@ async def create_new_session(request: Request,
                              session_notes: str = Form(""),
                              block_folder: str = Form(...),
                              block_notes: str = Form("")):
+    db.reinitialize()  # Clear the data from the last session
 
     # Create the session and block folder architecture
     session_path = Path(data_folder).joinpath(session_folder)
@@ -76,19 +88,39 @@ async def create_new_session(request: Request,
     # Create the content that will be uploaded to the session table
     block_content = session.create_default_block()
     block_content.update({
-        "user_name": user_name,
-        "rodent_name": rodent_name,
-        "data_folder": data_folder,
-        "session_folder": session_folder,
-        "session_notes": session_notes,
-        "block_folder": block_folder,
-        "block_notes": block_notes,
-        "session_path": str(session_path),
+        "user_name": user_name, "rodent_name": rodent_name,
+        "data_folder": data_folder, "session_folder": session_folder,
+        "session_notes": session_notes, "block_folder": block_folder,
+        "block_notes": block_notes, "session_path": str(session_path),
         "block_path": str(block_path),
         })
 
     db.insert_active_block(block_content)
     return block_content
+
+
+@app.post("/create_new_block")
+async def create_new_block(request: Request,
+                           block_folder: str = Form(...),
+                           block_notes: str = Form("")):
+    # Grab default values
+    block_id = f"{len(db.session_table) + 1 :02d}"
+    session_properties = db.get_session_properties()
+    block_properties = session.create_default_block(block_id=block_id)
+    block_content = {**session_properties, **block_properties}
+
+    # Create the appropriate folder architecture
+    block_path = Path(block_content["session_path"]).joinpath(block_folder)
+    session.create_block_folder(block_path)
+
+    # Add the new block to the session table
+    block_content.update({"block_folder": block_folder,
+                          "block_notes": block_notes,
+                          "block_path": str(block_path)})
+    db.insert_active_block(block_content)
+    return block_content
+
+
 @app.get("/dashboard")
 async def dashboard(request: Request):
     "Return the main dashboard"
