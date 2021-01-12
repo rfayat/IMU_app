@@ -36,6 +36,12 @@ def kill_by_pid(pid: int):
         subprocess.call(["taskkill", "/PID", str(pid)])
 
 
+def kill_multiple_by_pid(pid_list: List[int]):
+    "Kill a list of local processes using their pids"
+    for pid in pid_list:
+        kill_by_pid(pid)
+
+
 # Date helpers
 def now_as_str():
     "Return the current date and time as a string"

@@ -13,6 +13,7 @@ from . import tis_camera_win
 from . import session
 
 from tinydb import TinyDB, where, Query
+from typing import List
 # Serializer
 from tinydb_serialization import Serializer
 from tinydb_serialization import SerializationMiddleware
@@ -62,6 +63,7 @@ def append_to_list(key_to_target, value_to_append):
         return doc
     return transform
 
+
 def update_dict(key_to_target, update_value):
     "Custom operation to be used with db.update to update a dict"
     def transform(doc):
@@ -70,12 +72,26 @@ def update_dict(key_to_target, update_value):
         return doc
     return transform
 
+
 def pop_element(key_to_target, key_to_pop):
     "Custom operation to be used with db.update to pop an element from a dict"
     def transform(doc):
         "Pop an element from a dict of doc accessed with key_to_target"
         try:
             doc[key_to_target].pop(key_to_pop)
+        # key_to_pop not in the dict accessed w/ key_to_target
+        except KeyError:
+            pass
+        return doc
+    return transform
+
+
+def clear_dict(key_to_target):
+    "Custom operation to be used with db.update to clear a dict content"
+    def transform(doc):
+        "Clear a dict of doc accessed with key_to_target"
+        try:
+            doc[key_to_target] = {}
         # key_to_pop not in the dict accessed w/ key_to_target
         except KeyError:
             pass
@@ -130,14 +146,12 @@ class AcquisitionDB(TinyDB):
     # Initialization
     def reinitialize(self):
         "Reinitialize the database for a new session using the config file"
-        # TODO: Only save if the session was running
-        # Save the data linked to the last recording to the corresponding folder
-        self.save_in_recording_folder()
-        # Default values for the session parameters
+        # Save the session's data if the session was still running
+        if self.has_active_block():
+            self.save_in_session_folder()
+        # Default values for the session, rpi and tis camera parameters
         self.reinitialize_session()
-        # Default values  for the raspberry parameters
         self.reinitialize_rpi()
-        # Default values for the tis camera parameters
         self.reinitialize_tis_cam_win()
 
     def reinitialize_rpi(self):
@@ -160,12 +174,20 @@ class AcquisitionDB(TinyDB):
         "Reinitialize the session table"
         self.drop_table("session")
 
-    def save_in_recording_folder(self):
-        "Save the current tinydb json to the recording folder"
+    def save_in_session_folder(self):
+        "Save the current tinydb json to the session folder"
         # TODO
         pass
 
     # Session handling
+    def has_session(self):
+        "Return True if a block is in the session table, else False."
+        return len(self.session_table) > 0
+
+    def has_active_block(self):
+        "Return True if a block is currently running, else False."
+        return self.session_table.contains(where("running")==True)
+
     def insert_active_block(self, *args, **kwargs):
         "Set all active blocks to inactive and insert an active block"
         if len(self.session_table) != 0:
@@ -189,6 +211,11 @@ class AcquisitionDB(TinyDB):
         # Table names where local active processes can be found
         for table_name in ["tis_cam_win"]:
             self.remove_local_process_from_table(table_name, pid)
+
+    def remove_multiple_local_processes(self, pid_list: List[int]):
+        "Delete multiple local processes matching a pid from the db"
+        for pid in pid_list:
+            self.remove_local_process(pid)
 
     def remove_local_process_from_table(self, table_name: str, pid: int):
         "Delete a pid from the active process dict of a given table"
@@ -282,6 +309,51 @@ class AcquisitionDB(TinyDB):
     def get_available_rpi(self):
         "Return the rpi without any ongoing process"
         return self.rpi_table.search(where("active_processes")=={})
+
+    def get_busy_rpi(self):
+        "Return the rpi with ongoing processes"
+        return self.rpi_table.search(where("active_processes")!={})
+
+    def get_rpi(self, rpi_type: str):
+        "Return the entry in the rpi table matching the input rpi type"
+        return self.rpi_table.get(where("rpi_type") == rpi_type)
+
+    def get_rpi_credentials(self, rpi_type):
+        "Return the credentials for logging to a rpi via ssh"
+        rpi = self.get_rpi(rpi_type)
+        return rpi["ssh"]
+
+    def get_script_parameters(self, rpi_type):
+        "Return the path to the rpi python script and the linked options"
+        rpi = self.get_rpi(rpi_type)
+        script_path = rpi["path"]
+        script_options = rpi["options"]
+        return script_path, script_options
+
+    def add_active_process_rpi(self, rpi_type, pid: int, description: str):
+        "Add a new active process to a rpi's active processes field"
+        process_properties = {"pid": pid,
+                              "action": rpi_type,
+                              "description": description,
+                              "rpi_type": rpi_type}
+        new_process = {str(pid): process_properties}
+        self.rpi_table.update(update_dict("active_processes", new_process),
+                              where("rpi_type") == rpi_type)
+
+    def remove_active_process_rpi(self, rpi_type: str, pid: int):
+        "Remove a processes associated to a pid from the process dict of a rpi"
+        self.rpi_table.update(pop_element("active_processes", str(pid)),
+                              where("rpi_type") == rpi_type)
+
+    def remove_all_active_process_rpi(self, rpi_type: str):
+        "Clear all active processes from the active processes dict of a rpi"
+        self.rpi_table.update(clear_dict("active_processes"),
+                              where("rpi_type") == rpi_type)
+
+    def get_rpi_active_processes(self):
+        "Return all active processes on all remote raspberry pis"
+        return self.get_processes_from_table("rpi")
+
 
     # Management of the rodent database
     def add_rodent(self, rodent_name, sensor_id):

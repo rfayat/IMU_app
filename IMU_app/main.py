@@ -39,7 +39,10 @@ templates = Jinja2Templates(directory="IMU_app/templates/")
 @app.get("/")
 async def home():
     "Redirect to /dashboard if a session is running, to /new_session else"
-    RedirectResponse(f"/new_session")
+    if db.has_session():
+        return RedirectResponse("/dashboard")
+    else:
+        return RedirectResponse("/new_session")
 
 @app.get("/new_session")
 async def new_session(request: Request):
@@ -127,8 +130,17 @@ async def dashboard(request: Request):
     context = {"request": request,
                "available_cameras": db.get_available_cameras(),
                "available_rpi": db.get_available_rpi(),
-               "local_active_processes": db.get_local_active_processes()}
+               "local_active_processes": db.get_local_active_processes(),
+               "rpi_active_processes": db.get_rpi_active_processes()}
     return templates.TemplateResponse("dashboard.html", context=context)
+
+
+@app.get("/end")
+async def end_session():
+    "Redirect to the page for validating the end of the session"
+    raise NotImplementedError
+    kill_all()
+    db.save_in_session_folder()
 
 
 @app.get("/success")
@@ -140,6 +152,7 @@ async def success(request: Request, success: bool, message: Optional[str]=""):
                                                "message": message})
 
 
+# Handle processes
 @app.get("/kill/{pid}")
 async def kill_by_pid(pid: int):
     "Kill a local process using its process ID"
@@ -147,6 +160,32 @@ async def kill_by_pid(pid: int):
     db.remove_local_process(pid)
     return {"pid": pid, "message": f"Killed process {pid}"}
 
+
+@app.get("/kill_all")
+async def kill_all():
+    "Kill a local and remote processes"
+    # Kill local processes
+    local_processes = db.get_local_active_processes()
+    local_processes_pids = [int(pid) for pid in local_processes]
+    helpers.kill_multiple_by_pid(local_processes_pids)
+    db.remove_multiple_local_processes(local_processes_pids)
+    # Kill RPI processes
+    busy_rpi = db.get_busy_rpi()
+    for rpi in busy_rpi:
+        rpi_type = rpi["rpi_type"]
+        credentials = db.get_rpi_credentials(rpi_type)
+        ssh = RPI_connector.from_credentials(**param_pwm["ssh"])
+        ssh.kill_all()
+        ssh.close()
+        db.remove_all_active_process_rpi(rpi_type=rpi_type)
+
+    return {"message": "Killed local and remote processes",
+            "local": local_processes_pids,
+            "remote": {rpi["rpi_type"]: rpi["active_processes"] for rpi in busy_rpi}}  # noqa E501
+
+@app.get("/test")
+async def test():
+    return db.get_local_active_processes()
 
 # Handle TIS cameras
 @app.get("/tis_camera_win")
@@ -179,7 +218,7 @@ async def tis_cam_windows_upload(request: Request,
             "saving_path": saving_path}
 
 
-# TODO: The finally statement of the script does not seem to be executed when running $ kill pid
+# TODO: The finally statement of the script does not seem to be run when running $ kill pid
 @app.post("/tis_camera_win/action")
 async def tis_cam_windows_action(request: Request,
                                  cam_name: str = Form(...),
@@ -212,57 +251,68 @@ async def tis_cam_windows_record(cam_name: str):
 
 
 # Handle raspberry pi
-# TODO: Grab the parameters from the database rather than the config json
-@app.get("/rpi/pwm")
-async def start_pwm():
+@app.get("/rpi/{rpi_type}/start")
+async def start_rpi_process(rpi_type: str):
     "Start PWM with the parameters stored in the config JSON"
-    ssh = RPI_connector.from_credentials(**param_pwm["ssh"])
-    pid = ssh.run_script(param_pwm["path"], param_pwm["options"])
+    credentials = db.get_rpi_credentials(rpi_type)
+    script_path, script_options = db.get_script_parameters(rpi_type)
+    ssh = RPI_connector.from_credentials(**credentials)
+    pid = ssh.run_script(script_path, script_options)
     ssh.close()
-    os.environ["pwm_pid"] = str(pid)
+    description = db.get_rpi(rpi_type=rpi_type)["extended_description"]
+    db.add_active_process_rpi(rpi_type, pid=pid, description=description)
+
     return {"message": "Started PWM", "pid": pid}
 
 
-@app.get("/rpi/pwm/test_connection")
-async def test_connection_pwm():
+@app.get("/rpi/{rpi_type}/test_connection")
+async def test_rpi_connection(rpi_type: str):
     "Test the connection to the remote raspberry pi"
-    connected = RPI_connector.test_connection(**param_pwm["ssh"])
+    credentials = db.get_rpi_credentials(rpi_type)
+    connected = RPI_connector.test_connection(**credentials)
     if connected:
         return {"message": "success"}
     else:
         return {"message": "failure"}
 
 
-@app.get("/rpi/kill")
-async def kill_all():
-    "Kill all python processes on the remote rpi"
+# @app.get("/rpi/kill_all")
+# async def rpi_kill_all():
+#     "Kill all python processes on each remote rpi"
+#     # TODO: Use the RPI table to loop over all rpis
+#     raise NotImplementedError
+#     # ssh = RPI_connector.from_credentials(**param_pwm["ssh"])
+#     # ssh.kill_all()
+#     # ssh.close()
+#     # return {"message": "Killed all python processes"}
+
+@app.get("/test")
+def test():
+    return {"out": db.get_processes_from_table("rpi")}
+
+
+@app.get("/rpi/{rpi_type}/kill_all")
+async def rpi_kill_all(rpi_type: str):
+    "Kill all python processes on a particular rpi"
+    credentials = db.get_rpi_credentials(rpi_type)
     ssh = RPI_connector.from_credentials(**param_pwm["ssh"])
     ssh.kill_all()
     ssh.close()
-    return {"message": "Killed all python processes"}
+    db.remove_all_active_process_rpi(rpi_type=rpi_type)
+    return {"message": f"Killed all python processes on rpi {rpi_type}"}
 
-
-@app.get("/rpi/pwm/kill")
-@app.get("/rpi/kill/pwm")
-async def kill_pwm():
-    "Kill the pwm process on the RPI"
-    pid = os.environ.get("pwm_pid")
-    if pid is None:
-        return {"message": "No PWM process running"}
-    else:
-        ssh = RPI_connector.from_credentials(**param_pwm["ssh"])
-        ssh.kill(pid)
-        ssh.close()
-        return {"message": "Killed PWM", "pid": int(pid)}
-
-
-@app.get("/rpi/kill/{pid}")
-async def kill(pid: int):
-    "Kill a given process on the RPI"
-    ssh = RPI_connector.from_credentials(**param_pwm["ssh"])
+# TODO: The finally statement doesn't seem to be run when killing a process
+@app.get("/rpi/{rpi_type}/kill/{pid}")
+async def rpi_kill_process(rpi_type: str, pid: int):
+    "Kill a given process on a remote RPI"
+    # Connect to the rpi and kill the process
+    credentials = db.get_rpi_credentials(rpi_type)
+    ssh = RPI_connector.from_credentials(**credentials)
     ssh.kill(pid)
     ssh.close()
-    return {"message": "Killed process", "pid": pid}
+    # Update the database
+    db.remove_active_process_rpi(rpi_type=rpi_type, pid=pid)
+    return {"message": f"Killed process {pid} on rpi {rpi_type}", "pid": pid}
 
 
 # Handle the rodents (TODO: create the UI for this)

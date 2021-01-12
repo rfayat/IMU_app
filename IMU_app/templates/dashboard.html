@@ -25,6 +25,17 @@
             </div>
             {% endfor %}
 
+            {% for process_content in rpi_active_processes.values() %}
+            <div class="card">
+              <div class="card-body">
+                <h5 class="card-title">RPI {{process_content["rpi_type"]}} process {{process_content["pid"]}}</h5>
+                <h6 class="card-subtitle">{{process_content["description"]}}</h6>
+                <br/>
+                <a href="{{url_for("rpi_kill_process", rpi_type=process_content["rpi_type"], pid=process_content["pid"])}}" class="btn btn-danger">Kill Process</a>
+              </div>
+            </div>
+            {% endfor %}
+
 
 
           </div>
@@ -65,8 +76,8 @@
                   <h5 class="card-title">{{rpi["description"]}}</h5>
                   <h6 class="card-subtitle">{{rpi["extended_description"]}}</h6>
                   <br/>
-                  <a href="/rpi/{{rpi["rpi_type"]}}/test_connection" class="btn btn-primary">Test connection</a>
-                  <a href="#" class="btn btn-success">Start</a>
+                  <a href="{{url_for("test_rpi_connection", rpi_type=rpi["rpi_type"])}}" class="btn btn-primary">Test connection</a>
+                  <a href="{{url_for("start_rpi_process", rpi_type=rpi["rpi_type"])}}" class="btn btn-success">Start</a>
                 </div>
               </div>
             </div>
