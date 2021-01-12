@@ -135,12 +135,14 @@ async def dashboard(request: Request):
     return templates.TemplateResponse("dashboard.html", context=context)
 
 
-@app.get("/end")
+@app.get("/end_session")
 async def end_session():
     "Redirect to the page for validating the end of the session"
-    raise NotImplementedError
-    kill_all()
-    db.save_in_session_folder()
+    await kill_all()
+    if db.has_session():
+        db.set_blocks_to_inactive()
+        db.save_in_session_folder()
+    db.reinitialize()
 
 
 @app.get("/success")

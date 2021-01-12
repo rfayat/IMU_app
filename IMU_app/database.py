@@ -8,7 +8,7 @@ Author: Romain Fayat, January 2021
 """
 from pathlib import Path, WindowsPath
 from datetime import datetime
-from .helpers import read_config
+from .helpers import read_config, copy_file
 from . import tis_camera_win
 from . import session
 
@@ -156,13 +156,11 @@ class AcquisitionDB(TinyDB):
 
     def reinitialize_rpi(self):
         "Reinitialize the rpi table"
-        # TODO: Kill all ongoing processes
         self.drop_table("rpi")
         self.initialize_rpi_pwm()
 
     def reinitialize_tis_cam_win(self):
         "Reinitialize the TIS camera for windows table"
-        # TODO: Kill all ongoing processes
         config = read_config()
         self.drop_table("tis_cam_win")
         # Use the state files to infer the available cameras
@@ -176,8 +174,9 @@ class AcquisitionDB(TinyDB):
 
     def save_in_session_folder(self):
         "Save the current tinydb json to the session folder"
-        # TODO
-        pass
+        if self.has_session():
+            session_path = self.get_session_path()
+            copy_file(Path(PATH_DATABASE), session_path.joinpath("db.json"))
 
     # Session handling
     def has_session(self):
@@ -190,10 +189,8 @@ class AcquisitionDB(TinyDB):
 
     def insert_active_block(self, *args, **kwargs):
         "Set all active blocks to inactive and insert an active block"
-        if len(self.session_table) != 0:
-            # Set all other blocks to inactive
-            Q = Query()
-            self.session_table.upsert({"running": False}, Q.running.exists())
+        # Set all other blocks to inactive
+        self.set_blocks_to_inactive()
         # Insert a new block in the session table
         self.session_table.insert(*args, **kwargs)
 
@@ -204,6 +201,17 @@ class AcquisitionDB(TinyDB):
                               "rodent_name", "session_folder",
                               "session_notes", "session_path"]
         return {k: first_block[k] for k in session_properties}
+
+    def get_session_path(self):
+        "Return the path to the session directory"
+        session_path = self.get_session_properties()["session_path"]
+        return Path(session_path)
+
+    def set_blocks_to_inactive(self):
+        "Set the running property of all blocks to False"
+        if self.has_session():
+            Q = Query()
+            self.session_table.upsert({"running": False}, Q.running.exists())
 
     # Process handling
     def remove_local_process(self, pid: int):
