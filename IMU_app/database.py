@@ -207,6 +207,18 @@ class AcquisitionDB(TinyDB):
         session_path = self.get_session_properties()["session_path"]
         return Path(session_path)
 
+    def get_active_block(self):
+        "Return the currently active block if any"
+        return self.session_table.get(where("running")==True)
+
+    def get_active_block_path(self):
+        "Return the path to the active block"
+        active_block = self.get_active_block()
+        if active_block is not None:
+            return Path(active_block["block_path"])
+        else:
+            raise ValueError
+
     def set_blocks_to_inactive(self):
         "Set the running property of all blocks to False"
         if self.has_session():
@@ -257,6 +269,11 @@ class AcquisitionDB(TinyDB):
         return active_processes
 
     # TIS camera handling
+    def get_video_path(self):
+        "Return the path to the video folder of the currently active block"
+        active_block_path = self.get_active_block_path()
+        return active_block_path.joinpath("videos")
+
     def initialize_tiscamera(self, state_file_path):
         "Initialize a camera in the tis_cam_win table"
         if tis_camera_win.is_stored_state_file(state_file_path):

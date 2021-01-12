@@ -83,10 +83,9 @@ async def create_new_session(request: Request,
 
     # Create the session and block folder architecture
     session_path = Path(data_folder).joinpath(session_folder)
-    session.create_session_folder(session_path)
-
     block_path = session_path.joinpath(block_folder)
-    session.create_block_folder(block_path)
+    helpers.mkdirs(session_path)
+    helpers.mkdirs(block_path)
 
     # Create the content that will be uploaded to the session table
     block_content = session.create_default_block()
@@ -114,7 +113,7 @@ async def create_new_block(request: Request,
 
     # Create the appropriate folder architecture
     block_path = Path(block_content["session_path"]).joinpath(block_folder)
-    session.create_block_folder(block_path)
+    helpers.mkdirs(block_path)
 
     # Add the new block to the session table
     block_content.update({"block_folder": block_folder,
@@ -245,11 +244,18 @@ async def tis_cam_windows_preview(cam_name: str):
 @app.get("/tis_camera_win/{cam_name}/record")
 async def tis_cam_windows_record(cam_name: str):
     "Start a TIS camera recording from a cam_name"
-    # TODO: Implement + add file name
-    # pid = ...
-    pid = 43
+    state_file_path = db.get_state_file_path(cam_name)
+
+    # TODO convert to chunks so that we only need to provide the folder
+    recording_options = {"live": ""}  # TODO: Grab all recording options from the config
+    recording_folder = db.get_video_path().joinpath(cam_name)
+    helpers.mkdirs(recording_folder)
+    recording_options.update({"output": recording_folder.joinpath("0.avi")})
+
+    pid = tis_camera_win.start_tis_recording(state_file_path=state_file_path,
+                                             options=recording_options)
     db.add_tis_cam_process(cam_name, "record", pid)
-    return {"cam_name": cam_name, "action": "record", "pid": pid}
+    return {"cam_name": cam_name, "action": "record", "pid": pid, "options": recording_options}
 
 
 # Handle raspberry pi

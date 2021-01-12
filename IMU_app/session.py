@@ -16,13 +16,3 @@ def create_default_block(block_id="01"):
                      "data_folder": config["data_folder"],
                      "block_id": block_id}
     return block_default
-
-
-def create_session_folder(session_path: Path):
-    "Create a session folder architecture"
-    pass
-
-
-def create_block_folder(block_path: Path):
-    "Create a block folder architecture"
-    pass
