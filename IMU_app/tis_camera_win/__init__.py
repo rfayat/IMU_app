@@ -12,8 +12,7 @@ def state_file_from_cam_name(cam_name: str):
 
 def cam_name_from_state_file(state_file: str):
     "Return the camera name from the state file name"
-    if isinstance(state_file, Path):
-        state_file = state_file.name
+    state_file = Path(state_file).name
     return state_file.rstrip("_state_file")
 
 

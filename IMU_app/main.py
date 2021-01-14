@@ -126,7 +126,22 @@ async def create_new_block(request: Request,
 @app.get("/dashboard")
 async def dashboard(request: Request):
     "Return the main dashboard"
+    # Get the cameras for which a video was already recorded
+    cam_with_recording = []
+    if db.has_active_block():
+        try:
+            video_path = db.get_video_path()
+            for d in video_path.iterdir():  # Lopp over the video folders
+                # Append the name for which data was recorded
+                cam_name = d.name
+                if cam_name in db.get_available_cameras_names():
+                    cam_with_recording.append(cam_name)
+        except FileNotFoundError:
+            pass
+
     context = {"request": request,
+               "active_block": db.get_active_block(),
+               "cam_with_recording": cam_with_recording,
                "available_cameras": db.get_available_cameras(),
                "available_rpi": db.get_available_rpi(),
                "local_active_processes": db.get_local_active_processes(),
@@ -165,11 +180,6 @@ async def kill_by_pid(pid: int):
 @app.get("/kill_all")
 async def kill_all():
     "Kill a local and remote processes"
-    # Kill local processes
-    local_processes = db.get_local_active_processes()
-    local_processes_pids = [int(pid) for pid in local_processes]
-    helpers.kill_multiple_by_pid(local_processes_pids)
-    db.remove_multiple_local_processes(local_processes_pids)
     # Kill RPI processes
     busy_rpi = db.get_busy_rpi()
     for rpi in busy_rpi:
@@ -179,6 +189,12 @@ async def kill_all():
         ssh.kill_all()
         ssh.close()
         db.remove_all_active_process_rpi(rpi_type=rpi_type)
+
+    # Kill local processes
+    local_processes = db.get_local_active_processes()
+    local_processes_pids = [int(pid) for pid in local_processes]
+    helpers.kill_multiple_by_pid(local_processes_pids)
+    db.remove_multiple_local_processes(local_processes_pids)
 
     return {"message": "Killed local and remote processes",
             "local": local_processes_pids,
