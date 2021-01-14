@@ -57,5 +57,13 @@
             "state_file_path": ".tmp\\CAM3_state_file",
             "active_processes": []
         }
+    },
+    "users": {
+        "1": {
+            "user_name": "fayat"
+        },
+        "2": {
+            "user_name": "ghyomm"
+        }
     }
 }
