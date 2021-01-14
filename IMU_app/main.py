@@ -99,7 +99,7 @@ async def create_new_session(request: Request,
         })
 
     db.insert_active_block(block_content)
-    return block_content
+    return RedirectResponse("/", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @app.post("/create_new_block")
@@ -121,7 +121,7 @@ async def create_new_block(request: Request,
                           "block_notes": block_notes,
                           "block_path": str(block_path)})
     db.insert_active_block(block_content)
-    return block_content
+    return RedirectResponse("/", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @app.get("/dashboard")
@@ -158,6 +158,7 @@ async def end_session():
         db.save_in_session_folder()
     db.reinitialize()
 
+    return RedirectResponse("/")
 
 @app.get("/success")
 async def success(request: Request, success: bool, message: Optional[str]=""):
@@ -174,7 +175,7 @@ async def kill_by_pid(pid: int):
     "Kill a local process using its process ID"
     helpers.kill_by_pid(pid)
     db.remove_local_process(pid)
-    return {"pid": pid, "message": f"Killed process {pid}"}
+    return RedirectResponse("/")
 
 
 @app.get("/kill_all")
@@ -199,10 +200,7 @@ async def kill_all():
     return {"message": "Killed local and remote processes",
             "local": local_processes_pids,
             "remote": {rpi["rpi_type"]: rpi["active_processes"] for rpi in busy_rpi}}  # noqa E501
-
-@app.get("/test")
-async def test():
-    return db.get_local_active_processes()
+    return RedirectResponse("/")
 
 # Handle TIS cameras
 @app.get("/tis_camera_win")
@@ -231,8 +229,7 @@ async def tis_cam_windows_upload(request: Request,
     saving_path = os.path.sep.join([tis_saving_path, file_name])
     helpers.save_file(state_file.file, saving_path)
     db.initialize_tiscamera(saving_path)  # Logging in the database
-    return {"file_name": state_file.filename, "cam_name": cam_name,
-            "saving_path": saving_path}
+    return RedirectResponse("/", status_code=status.HTTP_303_SEE_OTHER)
 
 
 # TODO: The finally statement of the script does not seem to be run when running $ kill pid
@@ -254,7 +251,7 @@ async def tis_cam_windows_preview(cam_name: str):
     state_file_path = db.get_state_file_path(cam_name)
     pid = tis_camera_win.start_tis_preview(state_file_path=state_file_path)
     db.add_tis_cam_process(cam_name, "preview", pid)
-    return {"cam_name": cam_name, "action": "preview", "pid": pid}
+    return RedirectResponse("/", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @app.get("/tis_camera_win/{cam_name}/record")
@@ -271,7 +268,7 @@ async def tis_cam_windows_record(cam_name: str):
     pid = tis_camera_win.start_tis_recording(state_file_path=state_file_path,
                                              options=recording_options)
     db.add_tis_cam_process(cam_name, "record", pid)
-    return {"cam_name": cam_name, "action": "record", "pid": pid, "options": recording_options}
+    return RedirectResponse("/")
 
 
 # Handle raspberry pi
@@ -286,7 +283,7 @@ async def start_rpi_process(rpi_type: str):
     description = db.get_rpi(rpi_type=rpi_type)["extended_description"]
     db.add_active_process_rpi(rpi_type, pid=pid, description=description)
 
-    return {"message": "Started PWM", "pid": pid}
+    return RedirectResponse("/")
 
 
 @app.get("/rpi/{rpi_type}/test_connection")
@@ -310,10 +307,6 @@ async def test_rpi_connection(rpi_type: str):
 #     # ssh.close()
 #     # return {"message": "Killed all python processes"}
 
-@app.get("/test")
-def test():
-    return {"out": db.get_processes_from_table("rpi")}
-
 
 @app.get("/rpi/{rpi_type}/kill_all")
 async def rpi_kill_all(rpi_type: str):
@@ -323,7 +316,7 @@ async def rpi_kill_all(rpi_type: str):
     ssh.kill_all()
     ssh.close()
     db.remove_all_active_process_rpi(rpi_type=rpi_type)
-    return {"message": f"Killed all python processes on rpi {rpi_type}"}
+    return RedirectResponse("/")
 
 # TODO: The finally statement doesn't seem to be run when killing a process
 @app.get("/rpi/{rpi_type}/kill/{pid}")
@@ -336,7 +329,7 @@ async def rpi_kill_process(rpi_type: str, pid: int):
     ssh.close()
     # Update the database
     db.remove_active_process_rpi(rpi_type=rpi_type, pid=pid)
-    return {"message": f"Killed process {pid} on rpi {rpi_type}", "pid": pid}
+    return RedirectResponse("/")
 
 
 # Handle the rodents (TODO: create the UI for this)

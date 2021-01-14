@@ -6,16 +6,18 @@
     <div class="container">
       <h1 class="display-6">Running <span class="badge badge-primary">{{active_block["session_folder"]}}</span> <span class="badge badge-secondary">{{active_block["block_id"]}}</span> </h1>
       <p class="lead">Started at {{active_block["started_on"][9:]}} by {{active_block["user_name"]}}.</p>
+      <p class="lead">Data will be saved to:</p>
+      <p class="lead">{{active_block["block_path"]}}</p>
       {% if active_block["session_notes"] != "" %}
         <h4><a class="alert-link" href="#">Session notes</a></h4>
-        <p class="lead">{{active_block["session_notes"]}}.</p>
+        <p class="lead">{{active_block["session_notes"]}}</p>
       {% else %}
         <h4><a class="alert-link" href="#">Add session notes</a></h4>
       {% endif %}
 
       {% if active_block["block_notes"] != "" %}
         <h4><a class="alert-link" href="#">Block notes</a></h4>
-        <p class="lead">{{active_block["block_notes"]}}.</p>
+        <p class="lead">{{active_block["block_notes"]}}</p>
       {% else %}
         <h4><a class="alert-link" href="#">Add block notes</a></h4>
       {% endif %}
@@ -26,7 +28,7 @@
 
   {% if cam_with_recording != [] %}
     <div class="alert alert-danger" role="alert">
-      Data has already been saved to <span class="badge badge-secondary">{{", ".join(cam_with_recording)}}</span>, starting a recording will overwrite. To avoid a loss of data, you can <a class="alert-link" href={{url_for('new_block')}}>start a new block</a>.
+      <h4>Data has already been saved to <span class="badge badge-secondary">{{", ".join(cam_with_recording)}}</span>, starting a recording will overwrite. To avoid a loss of data, you can <a class="alert-link" href={{url_for('new_block')}}>start a new block</a>.</h4>
     </div>
   {% endif %}
 {% endif %}
@@ -175,6 +177,5 @@
     </div>
   </div>
 </div>
-{{rpi_active_processes}}
 
 {% endblock %}
