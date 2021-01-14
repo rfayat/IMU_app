@@ -61,6 +61,9 @@
           <b><br>
             {{data_folder}}\<span id="displayed_session_folder"></span>
           </b>
+
+          <span class="badge bg-danger text-white" id="warning_session_exists">This folder name already exists.</span>
+
         </p>
 
         <p class="lead text-muted">
@@ -104,6 +107,7 @@
       sessionFolderElement.value = session_folder_name;
       document.getElementById("displayed_session_folder").textContent = session_folder_name;
       updateBlockFolder();
+      updateWarningExistingFolder();
     }
 
     function updateBlockFolder(){
@@ -121,6 +125,16 @@
       document.getElementById("displayed_block_folder").textContent = session_folder_name + "\\" + block_folder_name;
     }
 
+    function updateWarningExistingFolder(){
+      session_folder_name = document.getElementById("session_folder").value;
+      var existing_sessions = {{existing_sessions | safe}}
+      if (existing_sessions.includes(session_folder_name)){
+        document.getElementById("warning_session_exists").style.display = "";
+      } else {
+        document.getElementById("warning_session_exists").style.display = "none";
+      }
+
+    }
 
 </script>
 

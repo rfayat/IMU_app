@@ -49,10 +49,11 @@ async def new_session(request: Request):
     users = db.table("users").all()
     rodents = db.table("rodents").all()
     default_block = session.create_default_block()
-
+    data_path = Path(default_block["data_folder"])
     context = {"request": request,
                "users": users,
                "rodents": rodents,
+               "existing_sessions": [p.name for p in data_path.iterdir()],
                **default_block}
     return templates.TemplateResponse("new_session.html", context=context)
 
