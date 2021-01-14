@@ -127,18 +127,16 @@ async def create_new_block(request: Request,
 @app.get("/dashboard")
 async def dashboard(request: Request):
     "Return the main dashboard"
-    # Get the cameras for which a video was already recorded
-    cam_with_recording = []
-    if db.has_active_block():
-        try:
-            video_path = db.get_video_path()
-            for d in video_path.iterdir():  # Lopp over the video folders
-                # Append the name for which data was recorded
-                cam_name = d.name
-                if cam_name in db.get_available_cameras_names():
-                    cam_with_recording.append(cam_name)
-        except FileNotFoundError:
-            pass
+    # Get the available cameras which have a recording
+    cam_with_recording = db.get_cameras_names_with_recording()
+    cam_available = db.get_available_cameras_names()
+    cam_with_recording = list(set(cam_with_recording) & set(cam_available))
+
+    # Check if a pwm rpi is running
+    running_pwm = False
+    for rpi_process in db.get_rpi_active_processes().values():
+        if rpi_process["action"] == "pwm":
+            running_pwm =True
 
     context = {"request": request,
                "active_block": db.get_active_block(),
@@ -146,7 +144,8 @@ async def dashboard(request: Request):
                "available_cameras": db.get_available_cameras(),
                "available_rpi": db.get_available_rpi(),
                "local_active_processes": db.get_local_active_processes(),
-               "rpi_active_processes": db.get_rpi_active_processes()}
+               "rpi_active_processes": db.get_rpi_active_processes(),
+               "running_pwm": running_pwm}
     return templates.TemplateResponse("dashboard.html", context=context)
 
 

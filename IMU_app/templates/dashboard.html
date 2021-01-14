@@ -50,7 +50,12 @@
                 <h5 class="card-title">Local Process {{process_content["pid"]}}</h5>
                 <h6 class="card-subtitle">{{process_content["description"]}}</h6>
                 <br/>
-                <a href="{{url_for("kill_by_pid", pid=process_content["pid"])}}" class="btn btn-danger">Kill Process</a>
+                {% if running_pwm %}
+                  <button class="btn btn-danger" disabled>Kill Process</a>
+                {% else %}
+                  <a href="{{url_for("kill_by_pid", pid=process_content["pid"])}}" class="btn btn-danger">Kill Process</a>
+                {% endif %}
+
               </div>
             </div>
             {% endfor %}
@@ -107,7 +112,12 @@
                   <h6 class="card-subtitle">{{rpi["extended_description"]}}</h6>
                   <br/>
                   <a href="{{url_for("test_rpi_connection", rpi_type=rpi["rpi_type"])}}" class="btn btn-primary">Test connection</a>
+                  {% if local_active_processes != {} %}
                   <a href="{{url_for("start_rpi_process", rpi_type=rpi["rpi_type"])}}" class="btn btn-success">Start</a>
+                  {% else %}
+                  <button class="btn btn-success" disabled>Start</button>
+                  <h5><span class="badge bg-danger text-white">No local processes running ! <a class="text-white" href="{{url_for("start_rpi_process", rpi_type=rpi["rpi_type"])}}"> Start anyways</a></span></h5>
+                  {% endif %}
                 </div>
               </div>
             </div>
@@ -165,4 +175,6 @@
     </div>
   </div>
 </div>
+{{rpi_active_processes}}
+
 {% endblock %}

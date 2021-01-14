@@ -292,6 +292,19 @@ class AcquisitionDB(TinyDB):
         available_cameras = self.get_available_cameras()
         return [c["cam_name"] for c in available_cameras]
 
+    def get_cameras_names_with_recording(self):
+        "Return a list of the cameras for which a video was already recorded"
+        cam_with_recording = []
+        if self.has_active_block():  # Check for the active block only
+            try:
+                video_path = self.get_video_path()
+                for d in video_path.iterdir():  # Lopp over the video folders
+                    # Append the name for which data was recorded
+                    cam_with_recording.append(d.name)
+            except FileNotFoundError:
+                pass
+        return cam_with_recording
+
     def get_state_file_path(self, cam_name):
         "Return the path to the state file of a given camera"
         cam_query = where("cam_name")==cam_name
