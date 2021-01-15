@@ -97,6 +97,7 @@ async def create_new_session(request: Request,
         "block_notes": block_notes, "session_path": str(session_path),
         "block_path": str(block_path),
         })
+    session.write_path2data(block_path)
 
     db.insert_active_block(block_content)
     return RedirectResponse("/", status_code=status.HTTP_303_SEE_OTHER)
@@ -120,6 +121,7 @@ async def create_new_block(request: Request,
     block_content.update({"block_folder": block_folder,
                           "block_notes": block_notes,
                           "block_path": str(block_path)})
+    session.write_path2data(block_path)
     db.insert_active_block(block_content)
     return RedirectResponse("/", status_code=status.HTTP_303_SEE_OTHER)
 
@@ -253,6 +255,14 @@ async def tis_cam_windows_preview(cam_name: str):
     db.add_tis_cam_process(cam_name, "preview", pid)
     return RedirectResponse("/", status_code=status.HTTP_303_SEE_OTHER)
 
+
+@app.get("/tis_camera_win/all/record")
+async def tis_cam_windows_record_all():
+    "Start a recording on all available cameras"
+    for cam in db.get_available_cameras():
+        await tis_cam_windows_record(cam_name=cam["cam_name"])
+    return RedirectResponse("/")
+    
 
 @app.get("/tis_camera_win/{cam_name}/record")
 async def tis_cam_windows_record(cam_name: str):

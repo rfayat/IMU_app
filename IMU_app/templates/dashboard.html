@@ -91,8 +91,22 @@
       <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionExample">
         <div class="card-body">
           <div class="card-body">
-            <div class="card-deck">
 
+            {% if available_cameras != [] %}
+            <div class="card-deck mb-4">
+              <div class="card">
+                <div class="card-body">
+                  <h5 class="card-title">TIS Camera</h5>
+                  <h6 class="card-subtitle">Local TIS Camera (Windows)</h6>
+                  <br/>
+                  <a href="{{url_for("tis_cam_windows_record_all")}}" class="btn btn-success">Start recording on all cameras</a>
+                </div>
+              </div>
+            </div>
+            {% endif %}
+
+            {% if available_cameras != [] %}
+            <div class="card-deck mb-4">
               {% for cam in available_cameras %}
               <div class="card">
                 <div class="card-body">
@@ -104,8 +118,9 @@
                 </div>
               </div>
               {% endfor %}
-
             </div>
+            {% endif %}
+
             {% for rpi in available_rpi %}
             <div class="card-deck">
               <div class="card">

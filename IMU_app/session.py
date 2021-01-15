@@ -16,3 +16,11 @@ def create_default_block(block_id="01"):
                      "data_folder": config["data_folder"],
                      "block_id": block_id}
     return block_default
+
+
+def write_path2data(block_path: Path):
+    "Write the current block path to path2data.txt"
+    config = helpers.read_config()
+    path2data = Path(config["path2data"])
+    with path2data.open("w") as f:
+        f.write(str(block_path))

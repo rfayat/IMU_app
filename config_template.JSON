@@ -1,5 +1,6 @@
 {
   "data_folder": "C:\\path\\to\\saving\\data",
+  "path2data": "C:\\path\\to\\path2data.txt",
   "pwm": {
     "ssh": {
       "host": "XXX.XXX.XX.XXX",

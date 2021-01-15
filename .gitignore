@@ -2,3 +2,4 @@ config.py
 config.json
 .tmp
 sandbox*
+path2data.txt
