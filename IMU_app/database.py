@@ -6,11 +6,10 @@ TODO: Modularize the database so that we can easily add new tables etc.
 
 Author: Romain Fayat, January 2021
 """
-from pathlib import Path, WindowsPath
+from pathlib import Path
 from datetime import datetime
 from .helpers import read_config, copy_file
 from . import tis_camera_win
-from . import session
 
 from tinydb import TinyDB, where, Query
 from typing import List
@@ -21,6 +20,7 @@ from tinydb_serialization import SerializationMiddleware
 TinyDB.DEFAULT_TABLE_KWARGS = {'cache_size': 0}
 PATH_DATABASE = ".db.json"
 PATH_CONFIG = "config.json"
+
 
 # Serializer doesn't seem to be working recursively in the tables
 class DateTimeSerializer(Serializer):
@@ -41,6 +41,7 @@ class DateTimeSerializer(Serializer):
         "Convert from string to datetime using the custom datetime format"
         return datetime.strptime(s, self.date_format)
 
+
 class PathSerializer(Serializer):
     "Serializer for storing pathlib.Path objects using tinydb"
 
@@ -56,7 +57,7 @@ class PathSerializer(Serializer):
 
 
 def append_to_list(key_to_target, value_to_append):
-    "Custom operation to be used with db.update to append a value to a list"
+    "Create a function appending a value to a list, to be used with db.update"
     def transform(doc):
         "Append an element to the list specified by key_to_target in doc"
         doc[key_to_target].append(value_to_append)
@@ -65,7 +66,7 @@ def append_to_list(key_to_target, value_to_append):
 
 
 def update_dict(key_to_target, update_value):
-    "Custom operation to be used with db.update to update a dict"
+    "Create a function updating a dict, to be used with db.update"
     def transform(doc):
         "Update a dict of doc accessed with key_to_target"
         doc[key_to_target].update(update_value)
@@ -74,7 +75,7 @@ def update_dict(key_to_target, update_value):
 
 
 def pop_element(key_to_target, key_to_pop):
-    "Custom operation to be used with db.update to pop an element from a dict"
+    "Create a function to pop an element from a dict, use with db.update"
     def transform(doc):
         "Pop an element from a dict of doc accessed with key_to_target"
         try:
@@ -87,7 +88,7 @@ def pop_element(key_to_target, key_to_pop):
 
 
 def clear_dict(key_to_target):
-    "Custom operation to be used with db.update to clear a dict content"
+    "Create a function which clears a dict content, to be used with db.update"
     def transform(doc):
         "Clear a dict of doc accessed with key_to_target"
         try:
@@ -185,7 +186,7 @@ class AcquisitionDB(TinyDB):
 
     def has_active_block(self):
         "Return True if a block is currently running, else False."
-        return self.session_table.contains(where("running")==True)
+        return self.session_table.contains(where("running") == True)  # noqa E712
 
     def insert_active_block(self, *args, **kwargs):
         "Set all active blocks to inactive and insert an active block"
@@ -209,7 +210,7 @@ class AcquisitionDB(TinyDB):
 
     def get_active_block(self):
         "Return the currently active block if any"
-        return self.session_table.get(where("running")==True)
+        return self.session_table.get(where("running") == True)  # noqa E712
 
     def get_active_block_path(self):
         "Return the path to the active block"
@@ -249,7 +250,7 @@ class AcquisitionDB(TinyDB):
         operation = pop_element("active_processes", str(pid))
         target_table.update(operation, has_selected_pid)
 
-    def get_processes_from_table(self, table_name:str):
+    def get_processes_from_table(self, table_name: str):
         "Get all local processes from a table"
         # Grab all elements of the table that have active processes
         selected_table = self.table(table_name, cache_size=0)
@@ -281,11 +282,12 @@ class AcquisitionDB(TinyDB):
             cam_entry = {"cam_name": cam_name,
                          "state_file_path": str(state_file_path),
                          "active_processes": {}}
-            self.tis_cam_win_table.upsert(cam_entry, where("cam_name")==cam_name)
+            cam_query = where("cam_name") == cam_name
+            self.tis_cam_win_table.upsert(cam_entry, cam_query)
 
     def get_available_cameras(self):
         "Return the cameras without any ongoing process"
-        return self.tis_cam_win_table.search(where("active_processes")=={})
+        return self.tis_cam_win_table.search(where("active_processes") == {})
 
     def get_available_cameras_names(self):
         "Return the names of the cameras without any ongoing process"
@@ -307,7 +309,7 @@ class AcquisitionDB(TinyDB):
 
     def get_state_file_path(self, cam_name):
         "Return the path to the state file of a given camera"
-        cam_query = where("cam_name")==cam_name
+        cam_query = where("cam_name") == cam_name
         cam_entry = self.tis_cam_win_table.get(cam_query)
         return cam_entry["state_file_path"]
 
@@ -329,7 +331,7 @@ class AcquisitionDB(TinyDB):
         config = read_config()
         process_pwm = config["pwm"]
 
-        description = f"PWM RPI"
+        description = "PWM RPI"
 
         # Additional information to be displayed
         options = config["pwm"]["options"]
@@ -346,11 +348,11 @@ class AcquisitionDB(TinyDB):
 
     def get_available_rpi(self):
         "Return the rpi without any ongoing process"
-        return self.rpi_table.search(where("active_processes")=={})
+        return self.rpi_table.search(where("active_processes") == {})
 
     def get_busy_rpi(self):
         "Return the rpi with ongoing processes"
-        return self.rpi_table.search(where("active_processes")!={})
+        return self.rpi_table.search(where("active_processes") != {})
 
     def get_rpi(self, rpi_type: str):
         "Return the entry in the rpi table matching the input rpi type"
@@ -392,27 +394,26 @@ class AcquisitionDB(TinyDB):
         "Return all active processes on all remote raspberry pis"
         return self.get_processes_from_table("rpi")
 
-
     # Management of the rodent database
     def add_rodent(self, rodent_name, sensor_id):
         "Add a new rodent and its sensor id to the rodents table"
         rodents_table = self.table("rodents")
         rodent_data = {"rodent_name": rodent_name, "sensor_id": sensor_id}
-        rodents_table.upsert(rodent_data, where("rodent_name")==rodent_name)
+        rodents_table.upsert(rodent_data, where("rodent_name") == rodent_name)
 
     def remove_rodent(self, rodent_name):
         "Remove a rodent from the rodents table"
         rodents_table = self.table("rodents", cache_size=0)
-        rodents_table.remove(where("rodent_name")==rodent_name)
+        rodents_table.remove(where("rodent_name") == rodent_name)
 
     # Management of the user database
     def add_user(self, user_name):
         "Add a new user to the user table"
         user_table = self.table("users")
         user_data = {"user_name": user_name}
-        user_table.upsert(user_data, where("user_name")==user_name)
+        user_table.upsert(user_data, where("user_name") == user_name)
 
     def remove_user(self, user_name):
         "Remove an user from the user table"
         user_table = self.table("users")
-        user_table.remove(where("user_name")==user_name)
+        user_table.remove(where("user_name") == user_name)

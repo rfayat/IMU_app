@@ -44,8 +44,10 @@ async def home():
     else:
         return RedirectResponse("/new_session")
 
+
 @app.get("/new_session")
 async def new_session(request: Request):
+    "Show the new session page"
     users = db.table("users").all()
     rodents = db.table("rodents").all()
     default_block = session.create_default_block()
@@ -60,6 +62,7 @@ async def new_session(request: Request):
 
 @app.get("/new_block")
 async def new_block(request: Request):
+    "Show the new block page"
     block_id = f"{len(db.session_table) + 1 :02d}"
     session_properties = db.get_session_properties()
     block_properties = session.create_default_block(block_id=block_id)
@@ -80,6 +83,7 @@ async def create_new_session(request: Request,
                              session_notes: str = Form(""),
                              block_folder: str = Form(...),
                              block_notes: str = Form("")):
+    "Handle the inputs from the new session page to create a new session"
     db.reinitialize()  # Clear the data from the last session
 
     # Create the session and block folder architecture
@@ -96,7 +100,7 @@ async def create_new_session(request: Request,
         "session_notes": session_notes, "block_folder": block_folder,
         "block_notes": block_notes, "session_path": str(session_path),
         "block_path": str(block_path),
-        })
+    })
     session.write_path2data(block_path)
 
     db.insert_active_block(block_content)
@@ -107,6 +111,7 @@ async def create_new_session(request: Request,
 async def create_new_block(request: Request,
                            block_folder: str = Form(...),
                            block_notes: str = Form("")):
+    "Handle the inputs from the new block page to create a new block"
     # Grab default values
     block_id = f"{len(db.session_table) + 1 :02d}"
     session_properties = db.get_session_properties()
@@ -138,7 +143,7 @@ async def dashboard(request: Request):
     running_pwm = False
     for rpi_process in db.get_rpi_active_processes().values():
         if rpi_process["action"] == "pwm":
-            running_pwm =True
+            running_pwm = True
 
     context = {"request": request,
                "active_block": db.get_active_block(),
@@ -162,8 +167,9 @@ async def end_session():
 
     return RedirectResponse("/")
 
+
 @app.get("/success")
-async def success(request: Request, success: bool, message: Optional[str]=""):
+async def success(request: Request, success: bool, message: Optional[str] = ""):  # noqa E501
     "Return the main dashboard"
     return templates.TemplateResponse("success.html",
                                       context={"request": request,
@@ -188,7 +194,7 @@ async def kill_all():
     for rpi in busy_rpi:
         rpi_type = rpi["rpi_type"]
         credentials = db.get_rpi_credentials(rpi_type)
-        ssh = RPI_connector.from_credentials(**param_pwm["ssh"])
+        ssh = RPI_connector.from_credentials(**credentials)
         ssh.kill_all()
         ssh.close()
         db.remove_all_active_process_rpi(rpi_type=rpi_type)
@@ -204,6 +210,7 @@ async def kill_all():
             "remote": {rpi["rpi_type"]: rpi["active_processes"] for rpi in busy_rpi}}  # noqa E501
     return RedirectResponse("/")
 
+
 # Handle TIS cameras
 @app.get("/tis_camera_win")
 async def tis_cam_windows(request: Request):
@@ -211,7 +218,7 @@ async def tis_cam_windows(request: Request):
     # Get names of the available cameras
     available_cameras = db.get_available_cameras()
     # Render the camera selection page
-    context={"request": request, "available_cameras": available_cameras}
+    context = {"request": request, "available_cameras": available_cameras}
     return templates.TemplateResponse("tis_camera_windows.html", context)
 
 
@@ -234,11 +241,11 @@ async def tis_cam_windows_upload(request: Request,
     return RedirectResponse("/", status_code=status.HTTP_303_SEE_OTHER)
 
 
-# TODO: The finally statement of the script does not seem to be run when running $ kill pid
 @app.post("/tis_camera_win/action")
 async def tis_cam_windows_action(request: Request,
                                  cam_name: str = Form(...),
                                  selected_action: str = Form(...)):
+    "Perform an action on a TIS camera on windows (preview / record)"
     if selected_action == "Preview":
         return RedirectResponse(f"/tis_camera_win/{cam_name}/preview",
                                 status_code=status.HTTP_303_SEE_OTHER)
@@ -262,7 +269,7 @@ async def tis_cam_windows_record_all():
     for cam in db.get_available_cameras():
         await tis_cam_windows_record(cam_name=cam["cam_name"])
     return RedirectResponse("/")
-    
+
 
 @app.get("/tis_camera_win/{cam_name}/record")
 async def tis_cam_windows_record(cam_name: str):
@@ -270,7 +277,8 @@ async def tis_cam_windows_record(cam_name: str):
     state_file_path = db.get_state_file_path(cam_name)
 
     # TODO convert to chunks so that we only need to provide the folder
-    recording_options = {"live": ""}  # TODO: Grab all recording options from the config
+    # TODO: Grab all recording options from the config
+    recording_options = {"live": ""}
     recording_folder = db.get_video_path().joinpath(cam_name)
     helpers.mkdirs(recording_folder)
     recording_options.update({"output": recording_folder.joinpath("0.avi")})
@@ -322,11 +330,12 @@ async def test_rpi_connection(rpi_type: str):
 async def rpi_kill_all(rpi_type: str):
     "Kill all python processes on a particular rpi"
     credentials = db.get_rpi_credentials(rpi_type)
-    ssh = RPI_connector.from_credentials(**param_pwm["ssh"])
+    ssh = RPI_connector.from_credentials(**credentials)
     ssh.kill_all()
     ssh.close()
     db.remove_all_active_process_rpi(rpi_type=rpi_type)
     return RedirectResponse("/")
+
 
 # TODO: The finally statement doesn't seem to be run when killing a process
 @app.get("/rpi/{rpi_type}/kill/{pid}")

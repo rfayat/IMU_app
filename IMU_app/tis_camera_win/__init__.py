@@ -5,6 +5,7 @@ Author: Romain Fayat, January 2021
 from pathlib import Path
 import subprocess
 
+
 def state_file_from_cam_name(cam_name: str):
     "Return the name which will be used to save the statfile for a camera"
     return f"{cam_name}_state_file"
@@ -31,13 +32,14 @@ def is_stored_state_file(file_name: str):
 
 def start_tis_preview(state_file_path):
     "Start a live preview for an input state file"
-    p = subprocess.Popen(f"python -m IMU_app.tis_camera_win.live_stream_from_statefile {state_file_path}",
-                         creationflags=subprocess.CREATE_NEW_CONSOLE)
+    command = f"python -m IMU_app.tis_camera_win.live_stream_from_statefile {state_file_path}"  # noqa E501
+    p = subprocess.Popen(command, creationflags=subprocess.CREATE_NEW_CONSOLE)
     return p.pid
+
 
 def start_tis_recording(state_file_path, options={}):
     "Start a live preview for an input state file"
     options_as_str = " ".join([f"--{k} {v}" for k, v in options.items()])
-    p = subprocess.Popen(f"python -m IMU_app.tis_camera_win.record_video {state_file_path} {options_as_str}",
-                         creationflags=subprocess.CREATE_NEW_CONSOLE)
+    command = f"python -m IMU_app.tis_camera_win.record_video {state_file_path} {options_as_str}"  # noqa E501
+    p = subprocess.Popen(command, creationflags=subprocess.CREATE_NEW_CONSOLE)
     return p.pid

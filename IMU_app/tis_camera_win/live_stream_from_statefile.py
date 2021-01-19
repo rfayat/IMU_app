@@ -7,7 +7,6 @@ import cv2
 import argparse
 from IC_trigger.camera import Camera
 import os
-import signal
 
 # Argument parsing
 parser = argparse.ArgumentParser(__doc__)
@@ -17,13 +16,14 @@ args = parser.parse_args()
 
 pathCamParam = args.pathCamParam
 
+
 def loop():
-    "Main loop for the program"
+    "Wait for any user interaction with the preview window"
     while True:
         cv2.waitKey(1)
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     # Select the camera from the provided statefile
     cam = Camera.from_file(pathCamParam)
     cam.StartLive(1)  # Start the preview

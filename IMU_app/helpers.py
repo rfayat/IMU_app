@@ -1,8 +1,6 @@
 "Helper functions for running the data acquisition GUI"
 import json
 import shutil
-import signal
-import os
 import subprocess
 from datetime import datetime
 from pathlib import Path
@@ -15,6 +13,7 @@ def read_config(config_path="./config.json"):
     with open(config_path) as f:
         config = json.load(f)
     return config
+
 
 def save_file(file, destination_path):
     "Save a binary file to a selected file"
@@ -48,13 +47,16 @@ def mkdirs(path):
 def kill_by_pid(pid: int):
     "Kill a local process using its pid"
     # VERY hacky solution to send a ctrl-c signal on windows
-    path_to_ctrl_c_script = Path().joinpath("IMU_app/tis_camera_win/send_ctrl-c.ps1").absolute()
+    wd = Path()
+    relative_path = "IMU_app/tis_camera_win/send_ctrl-c.ps1"
+    path_to_ctrl_c_script = wd.joinpath(relative_path).absolute()
     subprocess.Popen(["powershell.exe",
                       "-ExecutionPolicy",
                       "RemoteSigned",
                       str(path_to_ctrl_c_script),
                       str(pid)],
                      creationflags=subprocess.CREATE_NEW_CONSOLE)
+
 
 def kill_multiple_by_pid(pid_list: List[int]):
     "Kill a list of local processes using their pids"
