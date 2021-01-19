@@ -45,20 +45,16 @@ def mkdirs(path):
 
 
 # Process management
-# WARNING: The finally clauses of python scripts doesn't seem to be executed
-# def kill_by_pid(pid: int):
-#     "Kill a local process using its pid"
-#     try:
-#         return os.kill(pid, signal.CTRL_C_EVENT)
-#     except OSError:  # the process does not exist
-#         return None
-
 def kill_by_pid(pid: int):
     "Kill a local process using its pid"
-    # sometimes need to call taskkill twice for it to work
-    for i in range(2):
-        subprocess.call(["taskkill", "/PID", str(pid)])
-
+    # VERY hacky solution to send a ctrl-c signal on windows
+    path_to_ctrl_c_script = Path().joinpath("IMU_app/tis_camera_win/send_ctrl-c.ps1").absolute()
+    subprocess.Popen(["powershell.exe",
+                      "-ExecutionPolicy",
+                      "RemoteSigned",
+                      str(path_to_ctrl_c_script),
+                      str(pid)],
+                     creationflags=subprocess.CREATE_NEW_CONSOLE)
 
 def kill_multiple_by_pid(pid_list: List[int]):
     "Kill a list of local processes using their pids"

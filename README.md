@@ -17,6 +17,11 @@ Install [IC_trigger](https://github.com/rfayat/IMU_setup/tree/master/software/ca
 #### Configuration file
 A configuration file, needs to be filled following the model of [config_template.json](config_template.json). The path to this configuration file must match the `PATH_CONFIG` variable in [database.py](IMU_app/database.py) (default: `./config.json`).
 
+#### Enabling the run of Powershell scripts from python
+In a powershell window executed as admin, enable the execution of powershell scripts:
+```powershell
+Set-ExecutionPolicy RemoteSigned
+```
 #### TIS cameras for windows
 The parameters of each camera must be saved in an independent **state file**, cf `IC_scripts.live_steam` and its `--output` option.
 
