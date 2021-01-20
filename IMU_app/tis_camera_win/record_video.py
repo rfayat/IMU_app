@@ -12,7 +12,8 @@ import ctypes as C
 import tisgrabber as IC
 from IC_trigger.camera import Camera
 from IC_trigger.video import Video
-
+from dotenv_connector import DotEnvConnector
+from pathlib import Path
 
 # Argument parsing
 parser = argparse.ArgumentParser(__doc__)
@@ -24,12 +25,27 @@ parser.add_argument("-o", "--output",
 parser.add_argument("-L", "--live", const=1, default=0,
                     dest="showLive", action="store_const",
                     help="Show the live video.")
+parser.add_argument("-W", "--writeText", const=True, default=False,
+                    dest="writeText", action="store_const",
+                    help="Write information about the frame on each of them.")
+parser.add_argument("-a", "--autoCorrect", const=True, default=False,
+                    help="Share the frame count across multiple cameras to make the synchronisation more robust",
+                    dest="autoCorrect", action="store_const")
+
 args = parser.parse_args()
 
 pathCamParam = args.pathCamParam
 pathVideo = args.pathVideo
 showLive = args.showLive
+writeText = args.writeText
+autoCorrect = args.autoCorrect
 
+if autoCorrect:
+    shared_status_folder = Path(pathVideo).absolute().parent.parent
+    shared_status_path = shared_status_folder.joinpath(".current_frame")
+    shared_status = DotEnvConnector(str(shared_status_path))
+    if "frame" not in shared_status:
+        shared_status["frame"] = "0"
 
 def loop():
     "Wait for any user interaction with the preview window"
@@ -43,6 +59,21 @@ class CallbackUserdata(C.Structure):
     def __init__(self, camera, video):
         self.camera = camera  # Reference to the camera object
         self.video = video  # Reference to the video object
+        self.counter = 0
+
+def write_text_on_frame(frame, frame_number, is_duplicated=False):
+    "Write additional information (frame #...) on a frame"
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    text_to_add = f"Frame: {frame_number:05d}"
+    # Write if the frame was originally not captured and is just a placeholder
+    if is_duplicated:
+        text_to_add += "*"
+
+    # Add the text to the frame
+    cv2.putText(frame, text_to_add,
+                (50, 50), font, 1,
+                (0, 255, 255), 2, cv2.LINE_4)
+    return frame
 
 
 def Callback(hGrabber, pBuffer, framenumber, pData: CallbackUserdata):
@@ -53,13 +84,37 @@ def Callback(hGrabber, pBuffer, framenumber, pData: CallbackUserdata):
     :param: framenumber : Number of the frame since the stream started
     :param: pData : Pointer to additional user data structure
     """
-    print(f"Callback called frame: {framenumber}")
-    # Get the used image from our camera object
+    pData.counter += 1
+    n_frames_to_write = 1
     cvMat = pData.camera.GetImageEx()
     cvMat = cv2.flip(cvMat, 0)
 
-    # Write the image to the video
-    pData.video.write(cvMat)
+    is_duplicated = False
+
+    if autoCorrect:
+        shared_frame_number = int(shared_status.get("frame"))
+        # The camera is the first one to reach this frame number
+        if shared_frame_number < pData.counter:
+            shared_status["frame"] = str(pData.counter)
+        # The camera is late vs. at least one of the others
+        elif shared_frame_number > pData.counter:
+            # Write the current frame twice
+            is_duplicated = True
+            n_frames_to_write += 1
+            pData.counter += 1
+            print(f"############### CORRECTION BY 1 FRAME ###############")
+
+    if writeText:
+        cvMat = write_text_on_frame(cvMat,
+                                    frame_number=pData.counter,
+                                    is_duplicated=is_duplicated)
+
+    print(f"Frame number {pData.counter:05d}")
+    # Duplicate the frame if needed
+    for i in range(n_frames_to_write):
+        # Write the image to the video
+        pData.video.write(cvMat)
+
 
 
 if __name__ == "__main__":
