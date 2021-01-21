@@ -283,7 +283,7 @@ async def tis_cam_windows_record(cam_name: str):
     recording_options = {"writeText": "", "autoCorrect": ""}
     recording_folder = db.get_video_path().joinpath(cam_name)
     helpers.mkdirs(recording_folder)
-    recording_options.update({"output": recording_folder.joinpath("0.avi")})
+    recording_options.update({"output": recording_folder})
 
     pid = tis_camera_win.start_tis_recording(state_file_path=state_file_path,
                                              options=recording_options)

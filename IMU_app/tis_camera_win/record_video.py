@@ -20,8 +20,8 @@ parser = argparse.ArgumentParser(__doc__)
 parser.add_argument("pathCamParam",
                     help="Path to the state file of the camera")
 parser.add_argument("-o", "--output",
-                    help="Path to the output video file.",
-                    dest="pathVideo", default="test.avi")
+                    help="Path to the output video folder.",
+                    dest="pathVideoFolder", default=".")
 parser.add_argument("-L", "--live", const=1, default=0,
                     dest="showLive", action="store_const",
                     help="Show the live video.")
@@ -35,17 +35,24 @@ parser.add_argument("-a", "--autoCorrect", const=True, default=False,
 args = parser.parse_args()
 
 pathCamParam = args.pathCamParam
-pathVideo = args.pathVideo
+pathVideoFolder = Path(args.pathVideoFolder).absolute()
 showLive = args.showLive
 writeText = args.writeText
 autoCorrect = args.autoCorrect
+pathVideo = pathVideoFolder.joinpath("0.avi")
 
 if autoCorrect:
-    shared_status_folder = Path(pathVideo).absolute().parent.parent
+    # Create / Connect to the shared file
+    shared_status_folder = pathVideoFolder.parent
     shared_status_path = shared_status_folder.joinpath(".current_frame")
     shared_status = DotEnvConnector(str(shared_status_path))
+    # Initiate the ground truth frame count
     if "frame" not in shared_status:
         shared_status["frame"] = "0"
+
+    # Create the log file and list for skipped frames
+    duplicated_frames = []
+    log_file_path = pathVideoFolder.joinpath(".missing_frames")
 
 def loop():
     "Wait for any user interaction with the preview window"
@@ -92,7 +99,13 @@ def Callback(hGrabber, pBuffer, framenumber, pData: CallbackUserdata):
     is_duplicated = False
 
     if autoCorrect:
-        shared_frame_number = int(shared_status.get("frame"))
+        # Grab the shared frame number to compare it to the frame counter
+        try:
+            shared_frame_number = int(shared_status.get("frame"))
+        except TypeError:  # The shared frame number was being overwritten
+            print("%%%%%%%% error reading the shared frame number %%%%%%%%")
+            shared_frame_number = pData.counter
+
         # The camera is the first one to reach this frame number
         if shared_frame_number < pData.counter:
             shared_status["frame"] = str(pData.counter)
@@ -102,6 +115,7 @@ def Callback(hGrabber, pBuffer, framenumber, pData: CallbackUserdata):
             is_duplicated = True
             n_frames_to_write += 1
             pData.counter += 1
+            duplicated_frames.append(pData.counter)
             print(f"############### CORRECTION BY 1 FRAME ###############")
 
     if writeText:
@@ -126,7 +140,7 @@ if __name__ == "__main__":
     width = cam.get_video_format_width()
     height = cam.get_video_format_height()
     framerate = cam.GetFrameRate()
-    vid = Video(pathVideo, framerate, width, height)
+    vid = Video(str(pathVideo), framerate, width, height)
 
     # Set the callback function
     Callbackfunc = IC.TIS_GrabberDLL.FRAMEREADYCALLBACK(Callback)
@@ -143,3 +157,6 @@ if __name__ == "__main__":
     finally:
         cam.StopLive()
         vid.release()
+        if autoCorrect:
+            with log_file_path.open("w") as f:
+                f.writelines([str(i) + "\n" for i in duplicated_frames])
