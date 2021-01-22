@@ -280,8 +280,8 @@ async def tis_cam_windows_record(cam_name: str):
     # TODO: Grab all recording options from the config
     _, pwm_options = db.get_script_parameters("pwm")
     pwm_frequency = pwm_options["frequency"]
-    recording_options = {"writeText": "",
-                        "autoCorrect": "",
+    recording_options = {# "writeText": "",
+                         "autoCorrect": "",
                          "frameRate": pwm_frequency}
     recording_folder = db.get_video_path().joinpath(cam_name)
     helpers.mkdirs(recording_folder)

@@ -32,15 +32,24 @@ parser.add_argument("-W", "--writeText", const=True, default=False,
 parser.add_argument("-a", "--autoCorrect", const=True, default=False,
                     help="Share the frame count across multiple cameras to make the synchronisation more robust",
                     dest="autoCorrect", action="store_const")
+parser.add_argument("-f", "--frameRate",
+                    help="Frequency to use for the output video (default: use the camera's properties).",
+                    type=float, default=None, dest="videoFrameRate")
 
 args = parser.parse_args()
 
 pathCamParam = args.pathCamParam
-pathVideoFolder = Path(args.pathVideoFolder).absolute()
 showLive = args.showLive
 writeText = args.writeText
 autoCorrect = args.autoCorrect
+videoFrameRate = args.videoFrameRate
+
+pathVideoFolder = Path(args.pathVideoFolder).absolute()
 pathVideo = pathVideoFolder.joinpath("0.avi")
+
+timestamps = []
+timestamps_file_path = pathVideoFolder.joinpath(".timestamps")
+
 
 if autoCorrect:
     # Create / Connect to the shared file
@@ -92,6 +101,8 @@ def Callback(hGrabber, pBuffer, framenumber, pData: CallbackUserdata):
     :param: framenumber : Number of the frame since the stream started
     :param: pData : Pointer to additional user data structure
     """
+    timestamps.append(time.time())
+
     pData.counter += 1
     n_frames_to_write = 1
     cvMat = pData.camera.GetImageEx()
@@ -140,8 +151,11 @@ if __name__ == "__main__":
     # Initiate the video using the camera's properties
     width = cam.get_video_format_width()
     height = cam.get_video_format_height()
-    framerate = cam.GetFrameRate()
-    vid = Video(str(pathVideo), framerate, width, height)
+    # Grab the framerate from the camera properties if it was not provided
+    if videoFrameRate is None:
+        videoFrameRate = cam.GetFrameRate()
+
+    vid = Video(str(pathVideo), videoFrameRate, width, height)
 
     # Set the callback function
     Callbackfunc = IC.TIS_GrabberDLL.FRAMEREADYCALLBACK(Callback)
@@ -158,6 +172,10 @@ if __name__ == "__main__":
     finally:
         cam.StopLive()
         vid.release()
+        # Write the timestamp of each frame
+        with timestamps_file_path.open("w") as f:
+            f.writelines([str(i) + "\n" for i in timestamps])
+        # Write the duplicated frames
         if autoCorrect:
             with log_file_path.open("w") as f:
                 f.writelines([str(i) + "\n" for i in duplicated_frames])
