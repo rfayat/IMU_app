@@ -1,10 +1,10 @@
 """
-Start a video acquisition using a state file.
+Start an acquisition of chunks of videos using a state file.
 
-By default the output video is saved as 0.avi in the current working directory.
-directory.
+By default the output video last 3000 frames and are saved in the current
+working directory.
 
-Author: Romain Fayat, November 2020
+Author: Romain Fayat, January 2021
 """
 import cv2
 import argparse
@@ -20,6 +20,9 @@ import time
 parser = argparse.ArgumentParser(__doc__)
 parser.add_argument("pathCamParam",
                     help="Path to the state file of the camera")
+parser.add_argument("-n", "--nframes", type=int, default=3000,
+                    help="Number of frames per video chunk",
+                    dest="nframes_per_chunk")
 parser.add_argument("-o", "--output",
                     help="Path to the output video folder.",
                     dest="pathVideoFolder", default=".")
@@ -38,6 +41,7 @@ parser.add_argument("-f", "--frameRate",
 
 args = parser.parse_args()
 
+nframes_per_chunk = args.nframes_per_chunk
 pathCamParam = args.pathCamParam
 showLive = args.showLive
 writeText = args.writeText
@@ -45,7 +49,7 @@ autoCorrect = args.autoCorrect
 videoFrameRate = args.videoFrameRate
 
 pathVideoFolder = Path(args.pathVideoFolder).absolute()
-pathVideo = pathVideoFolder.joinpath("0.avi")
+pathVideo = pathVideoFolder.joinpath("000000.avi")
 
 timestamps = []
 timestamps_file_path = pathVideoFolder.joinpath(".timestamps")
@@ -73,15 +77,15 @@ def loop():
 class CallbackUserdata(C.Structure):
     "Pass user data to the callback function."
 
-    def __init__(self, camera, video):
+    def __init__(self, camera):
         self.camera = camera  # Reference to the camera object
-        self.video = video  # Reference to the video object
-        self.counter = 0
+        self.video = []  # Reference to the video objects
+        self.counter = -1
 
 def write_text_on_frame(frame, frame_number, is_duplicated=False):
     "Write additional information (frame #...) on a frame"
     font = cv2.FONT_HERSHEY_SIMPLEX
-    text_to_add = f"Frame: {frame_number:05d}"
+    text_to_add = f"Frame: {frame_number:06d}"
     # Write if the frame was originally not captured and is just a placeholder
     if is_duplicated:
         text_to_add += "*"
@@ -101,14 +105,30 @@ def Callback(hGrabber, pBuffer, framenumber, pData: CallbackUserdata):
     :param: framenumber : Number of the frame since the stream started
     :param: pData : Pointer to additional user data structure
     """
+    # Write the current time to the timestamps list
     timestamps.append(time.time())
 
+    # Increment the frame counter and preallocate frame duplication variables
     pData.counter += 1
     n_frames_to_write = 1
+    is_duplicated = False
+
+    # Grab the frame
     cvMat = pData.camera.GetImageEx()
     cvMat = cv2.flip(cvMat, 0)
 
-    is_duplicated = False
+    # If we reached the end of a chunk, end the video and create a new one
+    # WARNING: Potential issue if a frame is missed exactly at the boundary
+    if pData.counter % nframes_per_chunk == 0:
+        global vid
+        print("+++++++++++++ NEW VIDEO +++++++++++++")
+        if pData.counter != 0:
+            pData.video[pData.counter // nframes_per_chunk - 1].release()
+        time.sleep(1e-5)
+        pathVideo = pathVideoFolder.joinpath(f"{pData.counter:06d}.avi")
+        vid = Video(str(pathVideo), videoFrameRate, width, height)
+        pData.video.append(vid)
+        time.sleep(1e-3)
 
     if autoCorrect:
         # Grab the shared frame number to compare it to the frame counter
@@ -135,11 +155,11 @@ def Callback(hGrabber, pBuffer, framenumber, pData: CallbackUserdata):
                                     frame_number=pData.counter,
                                     is_duplicated=is_duplicated)
 
-    print(f"Frame number {pData.counter:05d}")
+    print(f"Frame number {pData.counter:06d}")
     # Duplicate the frame if needed
     for i in range(n_frames_to_write):
         # Write the image to the video
-        pData.video.write(cvMat)
+        pData.video[pData.counter // nframes_per_chunk].write(cvMat)
 
 
 
@@ -155,11 +175,10 @@ if __name__ == "__main__":
     if videoFrameRate is None:
         videoFrameRate = cam.GetFrameRate()
 
-    vid = Video(str(pathVideo), videoFrameRate, width, height)
 
     # Set the callback function
     Callbackfunc = IC.TIS_GrabberDLL.FRAMEREADYCALLBACK(Callback)
-    Userdata = CallbackUserdata(camera=cam, video=vid)
+    Userdata = CallbackUserdata(camera=cam)
     cam.SetFrameReadyCallback(Callbackfunc, Userdata)
 
     try:
