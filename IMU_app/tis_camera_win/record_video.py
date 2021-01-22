@@ -14,6 +14,7 @@ from IC_trigger.camera import Camera
 from IC_trigger.video import Video
 from dotenv_connector import DotEnvConnector
 from pathlib import Path
+import time
 
 # Argument parsing
 parser = argparse.ArgumentParser(__doc__)
