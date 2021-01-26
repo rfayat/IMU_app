@@ -276,12 +276,12 @@ async def tis_cam_windows_record(cam_name: str):
     "Start a TIS camera recording from a cam_name"
     state_file_path = db.get_state_file_path(cam_name)
 
-    # TODO convert to chunks so that we only need to provide the folder
     # TODO: Grab all recording options from the config
     _, pwm_options = db.get_script_parameters("pwm")
     pwm_frequency = pwm_options["frequency"]
     recording_options = {# "writeText": "",
-                         "autoCorrect": "",
+                         # "autoCorrect": "",
+                         # "nframes": 3000,
                          "frameRate": pwm_frequency}
     recording_folder = db.get_video_path().joinpath(cam_name)
     helpers.mkdirs(recording_folder)
@@ -289,6 +289,8 @@ async def tis_cam_windows_record(cam_name: str):
 
     pid = tis_camera_win.start_tis_recording(state_file_path=state_file_path,
                                              options=recording_options)
+    # pid = tis_camera_win.start_ffmpeg_recording(state_file_path=state_file_path,
+    #                                            options=recording_options)
     db.add_tis_cam_process(cam_name, "record", pid)
     return RedirectResponse("/")
 
