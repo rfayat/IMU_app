@@ -8,12 +8,16 @@
       "password": "XXXXXX",
       "port": 22
     },
-    "path": "my_path/run_pwm.py",
+    "path": "/home/fayat/Documents/rpi_utils/scripts/pwm_chunks.py",
     "options":{
-      "frequency": 1.0,
-      "pin": 24,
-      "duty_cycle": 50
-    }
+      "frequency": 30.00003,
+      "pwm_pin": 24,
+      "duty_cycle": 50,
+      "input_pin": 19,
+      "output_pin": 5,
+      "time_delay": 1.0,
+      "n_rising": 6000
+      }
   },
   "tis_camera_win": {
     "saving_path": "C:\\path\\to\\statefiles"

@@ -40,8 +40,6 @@ def start_tis_preview(state_file_path):
 def start_tis_recording(state_file_path, options={}):
     "Start a recording for an input state file"
     options_as_str = " ".join([f"--{k} {v}" for k, v in options.items()])
-#     command = f"python -m IMU_app.tis_camera_win.record_video {state_file_path} {options_as_str}"  # noqa E501
-    #command = f"python -m IMU_app.tis_camera_win.record_video_chunks {state_file_path} {options_as_str}"  # noqa E501
     command = f"python -m IMU_app.tis_camera_win.record_video_queue {state_file_path} {options_as_str}"  # noqa E501
     p = subprocess.Popen(command, creationflags=subprocess.CREATE_NEW_CONSOLE)
     # Make the priority of the process higher
